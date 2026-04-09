@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ScheduleSettingsView: View {
     @EnvironmentObject var backupManager: BackupManager
+    @AppStorage("idleEnabled") private var idleEnabled = false
 
     var body: some View {
         Form {
@@ -157,6 +158,23 @@ struct ScheduleSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            // Real-time monitoring section
+            Section {
+                Toggle(isOn: Binding(
+                    get: { idleEnabled },
+                    set: { backupManager.setIDLEEnabled($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Monitor Inbox for New Mail")
+                        Text("Keeps a persistent connection open per account. Uses more battery.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Real-Time Monitoring")
             }
         }
         .formStyle(.grouped)
