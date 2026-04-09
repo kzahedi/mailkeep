@@ -112,6 +112,13 @@ struct EditAccountView: View {
 
     @State private var isTesting = false
     @State private var testResult: TestResult?
+    @State private var isReauthorizing = false
+    @State private var reauthorizeResult: ReauthorizeResult?
+
+    enum ReauthorizeResult {
+        case success
+        case failure(String)
+    }
 
     enum TestResult {
         case success
@@ -163,9 +170,38 @@ struct EditAccountView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Text("To change the Google account, delete this account and add a new one.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button {
+                            reauthorize()
+                        } label: {
+                            if isReauthorizing {
+                                HStack(spacing: 6) {
+                                    ProgressView().scaleEffect(0.7)
+                                    Text("Signing in...")
+                                }
+                            } else {
+                                Text("Re-authorize with Google")
+                            }
+                        }
+                        .disabled(isReauthorizing)
+
+                        if let result = reauthorizeResult {
+                            switch result {
+                            case .success:
+                                Label("Re-authorized successfully", systemImage: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                    .font(.caption)
+                            case .failure(let message):
+                                Text(message)
+                                    .foregroundStyle(.red)
+                                    .font(.caption)
+                            }
+                        }
+
+                        Text("To switch to a different Google account, delete this account and add a new one.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 } else {
                     // Password-based account - full editing
                     TextField("Email Address", text: $email)
@@ -309,5 +345,30 @@ struct EditAccountView: View {
 
         backupManager.updateAccount(updatedAccount, password: newPassword)
         dismiss()
+    }
+
+    func reauthorize() {
+        isReauthorizing = true
+        reauthorizeResult = nil
+
+        Task {
+            do {
+                let tokens = try await GoogleOAuthService.shared.authorize()
+                try await account.saveOAuthTokens(tokens)
+                await MainActor.run {
+                    reauthorizeResult = .success
+                    isReauthorizing = false
+                }
+            } catch GoogleOAuthError.userCancelled {
+                await MainActor.run {
+                    isReauthorizing = false
+                }
+            } catch {
+                await MainActor.run {
+                    reauthorizeResult = .failure(error.localizedDescription)
+                    isReauthorizing = false
+                }
+            }
+        }
     }
 }
