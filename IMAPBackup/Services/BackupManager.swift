@@ -158,7 +158,7 @@ class BackupManager: ObservableObject {
             self.backupLocation = URL(fileURLWithPath: savedPath)
         } else {
             let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            self.backupLocation = documentsURL.appendingPathComponent("IMAPBackup")
+            self.backupLocation = documentsURL.appendingPathComponent("MailKeep")
         }
 
         // Load saved accounts and schedule
@@ -883,7 +883,7 @@ class BackupManager: ObservableObject {
                         guard emailData.count > 0, hasValidHeaders else {
                             // Write debug file for first failed email
                             let debugPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-                                .appendingPathComponent("IMAPBackup_debug_\(uid).txt")
+                                .appendingPathComponent("MailKeep_debug_\(uid).txt")
                             let hexPreview = emailData.prefix(500).map { String(format: "%02x", $0) }.joined(separator: " ")
                             let debugInfo = """
                             UID: \(uid)
@@ -1097,11 +1097,11 @@ class BackupManager: ObservableObject {
     var iCloudDriveURL: URL? {
         // iCloud Drive location for documents
         if let iCloudURL = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-            return iCloudURL.appendingPathComponent("Documents").appendingPathComponent("IMAPBackup")
+            return iCloudURL.appendingPathComponent("Documents").appendingPathComponent("MailKeep")
         }
         // Fallback to ~/Library/Mobile Documents/com~apple~CloudDocs/
         let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let iCloudDocs = homeDir.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/IMAPBackup")
+        let iCloudDocs = homeDir.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/MailKeep")
         return iCloudDocs
     }
 
@@ -1118,7 +1118,7 @@ class BackupManager: ObservableObject {
 
     func useLocalStorage() {
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let localURL = documentsURL.appendingPathComponent("IMAPBackup")
+        let localURL = documentsURL.appendingPathComponent("MailKeep")
         setBackupLocation(localURL)
     }
 

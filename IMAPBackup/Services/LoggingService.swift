@@ -31,7 +31,7 @@ actor LoggingService {
     private let maxLogFiles = Constants.maxLogFileCount
     private var logFileHandle: FileHandle?
     private let dateFormatter: DateFormatter
-    private let osLog = OSLog(subsystem: "com.kzahedi.IMAPBackup", category: "app")
+    private let osLog = OSLog(subsystem: "com.kzahedi.MailKeep", category: "app")
 
     @MainActor
     var logLevel: LogLevel {
@@ -41,7 +41,7 @@ actor LoggingService {
 
     private var logDirectory: URL {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("IMAPBackup/Logs")
+        return appSupport.appendingPathComponent("MailKeep/Logs")
     }
 
     private var currentLogFile: URL {

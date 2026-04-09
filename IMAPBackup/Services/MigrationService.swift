@@ -56,11 +56,12 @@ enum MigrationService {
                                  in: .userDomainMask).first!
         let oldAppSupport = appSupport.appendingPathComponent("IMAPBackup")
         let newAppSupport = appSupport.appendingPathComponent("MailKeep")
-        if !migrateDirectory(from: oldAppSupport, to: newAppSupport, fileManager: fm) {
+        let appSupportMigrated = migrateDirectory(from: oldAppSupport, to: newAppSupport, fileManager: fm)
+        if !appSupportMigrated {
             success = false
         }
-        // Clean up empty source directory after merge
-        if fm.fileExists(atPath: oldAppSupport.path) {
+        // Clean up empty source directory only after a successful migration
+        if appSupportMigrated && fm.fileExists(atPath: oldAppSupport.path) {
             let remaining = (try? fm.contentsOfDirectory(atPath: oldAppSupport.path)) ?? []
             if remaining.isEmpty {
                 try? fm.removeItem(at: oldAppSupport)

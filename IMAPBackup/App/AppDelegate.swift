@@ -15,7 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// Validate and repair UID caches on startup
     private func validateUIDCaches() async {
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let backupURL = documentsURL.appendingPathComponent("IMAPBackup")
+        let backupURL = documentsURL.appendingPathComponent("MailKeep")
 
         let storageService = StorageService(baseURL: backupURL)
         let repairedCount = await storageService.validateAndRepairAllCaches()
