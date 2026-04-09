@@ -117,34 +117,34 @@ class BackupManager: ObservableObject {
     /// Accounts that are missing passwords (e.g., after migration)
     @Published var accountsWithMissingPasswords: [EmailAccount] = []
 
-    private var activeTasks: [UUID: Task<Void, Never>] = [:]
-    private var activeHistoryIds: [UUID: UUID] = [:]  // Account ID -> History Entry ID
-    private var activeIMAPServices: [UUID: IMAPService] = [:]  // Account ID -> Active IMAP Service
-    private var cancellables = Set<AnyCancellable>()
-    private var scheduleTimer: Timer?
+    var activeTasks: [UUID: Task<Void, Never>] = [:]
+    var activeHistoryIds: [UUID: UUID] = [:]  // Account ID -> History Entry ID
+    var activeIMAPServices: [UUID: IMAPService] = [:]  // Account ID -> Active IMAP Service
+    var cancellables = Set<AnyCancellable>()
+    var scheduleTimer: Timer?
 
     // MARK: - Progress Throttling
     /// Pending progress updates to be flushed to UI
-    private var pendingProgressUpdates: [UUID: BackupProgress] = [:]
+    var pendingProgressUpdates: [UUID: BackupProgress] = [:]
     /// Task that handles throttled progress flushing
-    private var progressFlushTask: Task<Void, Never>?
+    var progressFlushTask: Task<Void, Never>?
     /// Interval for progress UI updates (150ms)
-    private let progressUpdateInterval: UInt64 = 150_000_000  // nanoseconds
+    let progressUpdateInterval: UInt64 = 150_000_000  // nanoseconds
     /// Track last subject update time for each account
-    private var lastSubjectUpdateTime: [UUID: Date] = [:]
+    var lastSubjectUpdateTime: [UUID: Date] = [:]
     /// Track email count at last subject update for each account
-    private var lastSubjectUpdateCount: [UUID: Int] = [:]
+    var lastSubjectUpdateCount: [UUID: Int] = [:]
 
     // MARK: - Stats Caching
     /// Cache entry for account stats
-    private struct StatsCacheEntry {
+    struct StatsCacheEntry {
         let stats: AccountStats
         let timestamp: Date
     }
     /// Cache for account stats with 5-second TTL
-    private var statsCache: [UUID: StatsCacheEntry] = [:]
+    var statsCache: [UUID: StatsCacheEntry] = [:]
     /// TTL for stats cache entries (5 seconds)
-    private let statsCacheTTL: TimeInterval = 5.0
+    let statsCacheTTL: TimeInterval = 5.0
     private let accountsKey = "EmailAccounts"
     private let scheduleKey = "BackupSchedule"
     private let scheduleTimeKey = "BackupScheduleTime"
