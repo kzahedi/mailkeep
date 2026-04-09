@@ -34,6 +34,15 @@ protocol IMAPServiceProtocol {
 
     /// Search for all email UIDs in selected folder
     func searchAll() async throws -> [UInt32]
+
+    /// Fetch UIDs of messages that arrived after lastUID
+    func fetchNewUIDs(after lastUID: UInt32) async throws -> [UInt32]
+
+    /// Return the highest UID in the currently selected folder
+    func fetchLastUID() async throws -> UInt32
+
+    /// Wait for an IMAP IDLE notification or timeout
+    func waitForIDLENotification(timeout: TimeInterval) async throws -> IDLENotification
 }
 
 // MARK: - IMAPService conformance
