@@ -1,6 +1,8 @@
 # MailKeep
 
-A native macOS menubar app for backing up emails from IMAP servers. Keep your emails safe with MailKeep. Supports Gmail (via App Passwords), IONOS, and custom IMAP servers.
+**Your email, on your terms.** MailKeep is a free, open source macOS menubar app that backs up your IMAP mailboxes to local `.eml` files you own — no cloud subscription, no data handed to a third party.
+
+Supports Gmail (OAuth2 and App Passwords), IONOS, and any custom IMAP server.
 
 ![macOS](https://img.shields.io/badge/macOS-14.0+-blue)
 ![Swift](https://img.shields.io/badge/Swift-5.9+-orange)
@@ -75,7 +77,7 @@ A native macOS menubar app for backing up emails from IMAP servers. Keep your em
 
 3. Copy to Applications:
    ```bash
-   cp -R ~/Library/Developer/Xcode/DerivedData/IMAPBackup-*/Build/Products/Release/MailKeep.app ~/Applications/
+   cp -R $(find ~/Library/Developer/Xcode/DerivedData/IMAPBackup-*/Build/Products/Release -name MailKeep.app -maxdepth 1) ~/Applications/
    ```
 
 Or open `IMAPBackup.xcodeproj` in Xcode and build with ⌘R.
@@ -92,8 +94,16 @@ Or open `IMAPBackup.xcodeproj` in Xcode and build with ⌘R.
 
 ### Gmail Setup
 
-Gmail requires an App Password instead of your regular password:
+MailKeep supports two Gmail authentication methods:
 
+**OAuth2 (recommended)** — Sign in with your Google account directly. No app password needed.
+1. Click **Add Account** and select **Gmail**
+2. Choose **Sign in with Google** and complete the browser OAuth flow
+3. MailKeep stores the tokens securely in your Keychain
+
+If your OAuth tokens expire later (Google revokes them after inactivity), go to **Settings → Accounts**, click the Gmail account, and hit **Re-authorize with Google** — no need to delete and re-add the account.
+
+**App Password** — Use if you prefer not to use OAuth.
 1. Enable 2-Factor Authentication on your Google account
 2. Go to [Google App Passwords](https://myaccount.google.com/apppasswords)
 3. Generate a new app password for "Mail"
@@ -120,7 +130,7 @@ Use your regular IONOS email password with server `imap.ionos.de` on port 993 (S
 
 ### Storage Options
 
-- **Local Storage**: Backups saved to `~/Documents/IMAPBackup/`
+- **Local Storage**: Backups saved to `~/Documents/MailKeep/`
 - **iCloud Drive**: Sync backups across all your Macs automatically
 - **Custom Location**: Choose any folder via Settings → General
 
@@ -158,7 +168,7 @@ Extract attachments to separate folders for easy access:
 
 Extracted attachments are saved alongside your emails:
 ```
-IMAPBackup/
+MailKeep/
 └── user@example.com/
     └── INBOX/
         ├── 20240115_143022_John_Smith.eml
@@ -207,7 +217,7 @@ The app automatically detects throttling and backs off exponentially.
 Debug issues with detailed logs:
 
 1. Go to **Settings → Advanced**
-2. View logs location: `~/Library/Logs/IMAPBackup/`
+2. View logs location: `~/Library/Application Support/MailKeep/Logs/`
 3. Logs include:
    - Connection attempts and failures
    - Download progress and errors
@@ -217,7 +227,7 @@ Debug issues with detailed logs:
 ## Backup Structure
 
 ```
-IMAPBackup/
+MailKeep/
 └── user@example.com/
     ├── INBOX/
     │   ├── 20240115_143022_John_Smith.eml
@@ -310,7 +320,7 @@ For accounts with 50,000+ emails:
 - Initial backup may take several hours
 - Enable **Conservative** rate limiting to avoid throttling
 - Use **iCloud Drive** storage for automatic sync across devices
-- Check logs at `~/Library/Logs/IMAPBackup/` if issues occur
+- Check logs at `~/Library/Application Support/MailKeep/Logs/` if issues occur
 
 ### Disk Space
 
@@ -324,7 +334,7 @@ If running low on storage:
 
 Debug logs are stored at:
 ```
-~/Library/Logs/IMAPBackup/backup.log
+~/Library/Application Support/MailKeep/Logs/
 ```
 
 Open Console.app and filter by "MailKeep" to view live logs.
