@@ -50,6 +50,7 @@
 		C10000010000000000000008 /* VerificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000008 /* VerificationServiceTests.swift */; };
 		C10000010000000000000009 /* RetentionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000009 /* RetentionServiceTests.swift */; };
 		C1000001000000000000000A /* IMAPIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000A /* IMAPIntegrationTests.swift */; };
+		C1000001000000000000000B /* MigrationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000B /* MigrationServiceTests.swift */; };
 		D10000010000000000000001 /* IMAPBackupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000001 /* IMAPBackupUITests.swift */; };
 		D10000010000000000000002 /* IMAPBackupUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000002 /* IMAPBackupUITestsLaunchTests.swift */; };
 		B10000010000000000000030 /* OAuthSecrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000030 /* OAuthSecrets.swift */; };
@@ -128,6 +129,7 @@
 		C10000020000000000000008 /* VerificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationServiceTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000009 /* RetentionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetentionServiceTests.swift; sourceTree = "<group>"; };
 		C1000002000000000000000A /* IMAPIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAPIntegrationTests.swift; sourceTree = "<group>"; };
+		C1000002000000000000000B /* MigrationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationServiceTests.swift; sourceTree = "<group>"; };
 		C10000030000000000000002 /* IMAPBackupTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IMAPBackupTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D10000020000000000000001 /* IMAPBackupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAPBackupUITests.swift; sourceTree = "<group>"; };
 		D10000020000000000000002 /* IMAPBackupUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAPBackupUITestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -326,6 +328,7 @@
 				C10000020000000000000007 /* AttachmentServiceTests.swift */,
 				C10000020000000000000008 /* VerificationServiceTests.swift */,
 				C10000020000000000000009 /* RetentionServiceTests.swift */,
+				C1000002000000000000000B /* MigrationServiceTests.swift */,
 			);
 			path = IMAPBackupTests;
 			sourceTree = "<group>";
@@ -531,6 +534,7 @@
 				C10000010000000000000008 /* VerificationServiceTests.swift in Sources */,
 				C10000010000000000000009 /* RetentionServiceTests.swift in Sources */,
 				C1000001000000000000000A /* IMAPIntegrationTests.swift in Sources */,
+				C1000001000000000000000B /* MigrationServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

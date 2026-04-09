@@ -89,6 +89,50 @@ enum MigrationService {
         print("[Migration] Migrated \(oauthCount) OAuth token items from Keychain")
     }
 
+    // MARK: - File System Migration Helpers
+
+    /// Move `oldURL` to `newURL`. If both exist, merges contents (skips conflicts).
+    /// Returns true on success or when source doesn't exist (no-op).
+    /// Internal (not private) so tests can reach it via @testable import.
+    static func migrateDirectory(from oldURL: URL, to newURL: URL,
+                                 fileManager: FileManager = .default) -> Bool {
+        guard fileManager.fileExists(atPath: oldURL.path) else {
+            return true  // nothing to migrate
+        }
+
+        if !fileManager.fileExists(atPath: newURL.path) {
+            do {
+                try fileManager.moveItem(at: oldURL, to: newURL)
+                print("[Migration] Renamed \(oldURL.lastPathComponent) → \(newURL.lastPathComponent)")
+                return true
+            } catch {
+                print("[Migration] Failed to rename \(oldURL.path): \(error)")
+                return false
+            }
+        } else {
+            return mergeDirectory(from: oldURL, to: newURL, fileManager: fileManager)
+        }
+    }
+
+    private static func mergeDirectory(from oldURL: URL, to newURL: URL,
+                                       fileManager: FileManager) -> Bool {
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: oldURL, includingPropertiesForKeys: nil) else { return true }
+
+        var allSucceeded = true
+        for item in contents {
+            let dest = newURL.appendingPathComponent(item.lastPathComponent)
+            guard !fileManager.fileExists(atPath: dest.path) else { continue }
+            do {
+                try fileManager.moveItem(at: item, to: dest)
+            } catch {
+                print("[Migration] Failed to move \(item.lastPathComponent): \(error)")
+                allSucceeded = false
+            }
+        }
+        return allSucceeded
+    }
+
     private static func migrateKeychainService(from oldService: String, to newService: String) -> Int {
         // Query all items from old service
         let query: [String: Any] = [
