@@ -117,17 +117,39 @@ enum MigrationService {
     private static func mergeDirectory(from oldURL: URL, to newURL: URL,
                                        fileManager: FileManager) -> Bool {
         guard let contents = try? fileManager.contentsOfDirectory(
-            at: oldURL, includingPropertiesForKeys: nil) else { return true }
+            at: oldURL, includingPropertiesForKeys: [.isDirectoryKey]) else {
+            print("[Migration] Failed to list contents of \(oldURL.path)")
+            return false
+        }
 
         var allSucceeded = true
         for item in contents {
             let dest = newURL.appendingPathComponent(item.lastPathComponent)
-            guard !fileManager.fileExists(atPath: dest.path) else { continue }
-            do {
-                try fileManager.moveItem(at: item, to: dest)
-            } catch {
-                print("[Migration] Failed to move \(item.lastPathComponent): \(error)")
-                allSucceeded = false
+            let isDir = (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+
+            if isDir {
+                if fileManager.fileExists(atPath: dest.path) {
+                    // Recurse into the existing destination directory
+                    if !mergeDirectory(from: item, to: dest, fileManager: fileManager) {
+                        allSucceeded = false
+                    }
+                } else {
+                    do {
+                        try fileManager.moveItem(at: item, to: dest)
+                    } catch {
+                        print("[Migration] Failed to move directory \(item.lastPathComponent): \(error)")
+                        allSucceeded = false
+                    }
+                }
+            } else {
+                // File: skip if already exists at destination (conflict)
+                guard !fileManager.fileExists(atPath: dest.path) else { continue }
+                do {
+                    try fileManager.moveItem(at: item, to: dest)
+                } catch {
+                    print("[Migration] Failed to move \(item.lastPathComponent): \(error)")
+                    allSucceeded = false
+                }
             }
         }
         return allSucceeded
