@@ -71,7 +71,7 @@ actor IMAPService {
     private var connection: NWConnection?
     private var isConnected = false
     private var responseBuffer = ""
-    var tagCounter = 0
+    private(set) var tagCounter = 0
     private var currentFolder: String?
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 3
