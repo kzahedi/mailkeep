@@ -43,7 +43,7 @@ extension BackupManager {
             var folderNewUIDs: [(IMAPFolder, [UInt32])] = []
             var totalNewEmails = 0
 
-            for (index, folder) in selectableFolders.enumerated() {
+            for folder in selectableFolders {
                 guard !Task.isCancelled else { break }
 
                 updateProgress(for: account.id) {
