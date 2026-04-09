@@ -65,6 +65,8 @@ extension IMAPService {
                 } onCancel: {
                     // Disconnect so the pending NWConnection receive fires with an error,
                     // allowing the reader task to complete and the group to unblock.
+                    // Note: actor isolation serializes this disconnect() before any
+                    // subsequent connect() call from IDLEManager — no race possible.
                     Task { await self.disconnect() }
                 }
             }
@@ -76,7 +78,9 @@ extension IMAPService {
             }
 
             // First task to complete wins
-            let result = try await group.next()!
+            guard let result = try await group.next() else {
+                throw IMAPError.commandFailed("IDLE task group completed with no result")
+            }
             group.cancelAll()
             return result
         }
@@ -90,6 +94,7 @@ extension IMAPService {
     /// Issues `UID SEARCH UID (lastUID+1):*`.
     /// Returns an empty array if no new messages exist.
     func fetchNewUIDs(after lastUID: UInt32) async throws -> [UInt32] {
+        guard lastUID < UInt32.max else { return [] }
         let tag = nextTag()
         let nextUID = lastUID + 1
         try await sendRaw("\(tag) UID SEARCH UID \(nextUID):*\r\n")
@@ -122,10 +127,10 @@ extension IMAPService {
         try await sendRaw("DONE\r\n")
         while true {
             let chunk = try await readResponse()
-            if chunk.contains("\(idleTag) OK") ||
-               chunk.contains("\(idleTag) NO") ||
-               chunk.contains("\(idleTag) BAD") {
-                return
+            if chunk.contains("\(idleTag) OK") { return }
+            if chunk.contains("\(idleTag) NO") { return }
+            if chunk.contains("\(idleTag) BAD") {
+                throw IMAPError.commandFailed("DONE rejected: \(chunk.trimmingCharacters(in: .whitespacesAndNewlines))")
             }
         }
     }
