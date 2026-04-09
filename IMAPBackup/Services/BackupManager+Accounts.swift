@@ -63,6 +63,7 @@ extension BackupManager {
     func removeAccount(_ account: EmailAccount) {
         accounts.removeAll { $0.id == account.id }
         saveAccounts()
+        Task { await IDLEManager.shared.stopMonitoring(accountId: account.id) }
         // Remove password from Keychain
         Task {
             do {
@@ -77,6 +78,7 @@ extension BackupManager {
         if let index = accounts.firstIndex(where: { $0.id == account.id }) {
             accounts[index] = account
             saveAccounts()
+            restartIDLEMonitoring(for: account)
             // Update password in Keychain if provided
             if let password = password {
                 Task {

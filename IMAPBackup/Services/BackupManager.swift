@@ -54,6 +54,7 @@ class BackupManager: ObservableObject {
     let scheduleConfigKey = "BackupScheduleConfig"
     let backupLocationKey = "BackupLocation"
     let streamingThresholdKey = "StreamingThresholdBytes"
+    let idleEnabledKey = "idleEnabled"
 
     init() {
         // Load backup location or set default
@@ -95,6 +96,9 @@ class BackupManager: ObservableObject {
 
         // Subscribe to rate limit settings changes for real-time propagation
         subscribeToRateLimitChanges()
+
+        // Start IDLE monitoring if enabled
+        startIDLEMonitoring()
     }
 
     /// Subscribe to rate limit settings changes and propagate to active IMAP services
