@@ -18,6 +18,7 @@
 		D100000100000001 /* BackupScheduleTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D100000200000001 /* BackupScheduleTypes.swift */; };
 		D100000100000002 /* BackupManager+Accounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D100000200000002 /* BackupManager+Accounts.swift */; };
 		D100000100000003 /* BackupManager+Scheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = D100000200000003 /* BackupManager+Scheduling.swift */; };
+		D100000100000004 /* BackupManager+Operations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D100000200000004 /* BackupManager+Operations.swift */; };
 		B10000010000000000000009 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000009 /* MainWindowView.swift */; };
 		B1000001000000000000000A /* AccountRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000000A /* AccountRowView.swift */; };
 		B10000010000000000000022 /* MissingPasswordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000022 /* MissingPasswordsView.swift */; };
@@ -96,6 +97,7 @@
 		D100000200000001 /* BackupScheduleTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupScheduleTypes.swift; sourceTree = "<group>"; };
 		D100000200000002 /* BackupManager+Accounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BackupManager+Accounts.swift"; sourceTree = "<group>"; };
 		D100000200000003 /* BackupManager+Scheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BackupManager+Scheduling.swift"; sourceTree = "<group>"; };
+		D100000200000004 /* BackupManager+Operations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BackupManager+Operations.swift"; sourceTree = "<group>"; };
 		B10000020000000000000009 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		B1000002000000000000000A /* AccountRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountRowView.swift; sourceTree = "<group>"; };
 		B10000020000000000000022 /* MissingPasswordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissingPasswordsView.swift; sourceTree = "<group>"; };
@@ -261,6 +263,7 @@
 				D100000200000001 /* BackupScheduleTypes.swift */,
 				D100000200000002 /* BackupManager+Accounts.swift */,
 				D100000200000003 /* BackupManager+Scheduling.swift */,
+				D100000200000004 /* BackupManager+Operations.swift */,
 				B10000020000000000000010 /* EmailParser.swift */,
 				B10000020000000000000011 /* DatabaseService.swift */,
 				B10000020000000000000013 /* SearchService.swift */,
@@ -496,6 +499,7 @@
 				D100000100000001 /* BackupScheduleTypes.swift in Sources */,
 				D100000100000002 /* BackupManager+Accounts.swift in Sources */,
 				D100000100000003 /* BackupManager+Scheduling.swift in Sources */,
+				D100000100000004 /* BackupManager+Operations.swift in Sources */,
 				B10000010000000000000009 /* MainWindowView.swift in Sources */,
 				B1000001000000000000000A /* AccountRowView.swift in Sources */,
 				B10000010000000000000022 /* MissingPasswordsView.swift in Sources */,
