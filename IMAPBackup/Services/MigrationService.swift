@@ -6,6 +6,8 @@ import Security
 enum MigrationService {
     private static let migrationCompletedKey = "MigrationFromIMAPBackupCompleted"
     private static let oldBundleId = "com.kzahedi.IMAPBackup"
+    private static let fileSystemMigrationKey = "MigrationFileSystemToMailKeepCompleted"
+    private static let backupLocationDefaultsKey = "BackupLocation"
 
     /// Check if migration is needed and perform it (synchronous)
     static func migrateIfNeeded() {
@@ -38,6 +40,70 @@ enum MigrationService {
         UserDefaults.standard.synchronize()
 
         print("[Migration] Migration from IMAPBackup to MailKeep completed successfully")
+    }
+
+    /// Migrate file system paths from IMAPBackup naming to MailKeep.
+    /// Must be called synchronously before BackupManager is initialized.
+    static func migrateFileSystemIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: fileSystemMigrationKey) else { return }
+
+        print("[Migration] Starting file system migration to MailKeep...")
+        var success = true
+        let fm = FileManager.default
+
+        // 1. Migrate App Support directory (contains Logs)
+        let appSupport = fm.urls(for: .applicationSupportDirectory,
+                                 in: .userDomainMask).first!
+        let oldAppSupport = appSupport.appendingPathComponent("IMAPBackup")
+        let newAppSupport = appSupport.appendingPathComponent("MailKeep")
+        if !migrateDirectory(from: oldAppSupport, to: newAppSupport, fileManager: fm) {
+            success = false
+        }
+        // Clean up empty source directory after merge
+        if fm.fileExists(atPath: oldAppSupport.path) {
+            let remaining = (try? fm.contentsOfDirectory(atPath: oldAppSupport.path)) ?? []
+            if remaining.isEmpty {
+                try? fm.removeItem(at: oldAppSupport)
+            }
+        }
+
+        // 2. Migrate backup storage directory
+        if let savedPath = UserDefaults.standard.string(forKey: backupLocationDefaultsKey) {
+            let oldURL = URL(fileURLWithPath: savedPath)
+            if oldURL.lastPathComponent == "IMAPBackup" {
+                let newURL = oldURL.deletingLastPathComponent()
+                    .appendingPathComponent("MailKeep")
+                if fm.fileExists(atPath: oldURL.path) {
+                    if migrateDirectory(from: oldURL, to: newURL, fileManager: fm) {
+                        UserDefaults.standard.set(newURL.path,
+                                                  forKey: backupLocationDefaultsKey)
+                        print("[Migration] Updated BackupLocation → \(newURL.path)")
+                        // Clean up empty source directory after merge
+                        let remaining = (try? fm.contentsOfDirectory(atPath: oldURL.path)) ?? []
+                        if remaining.isEmpty {
+                            try? fm.removeItem(at: oldURL)
+                        }
+                    } else {
+                        success = false
+                    }
+                } else {
+                    // Source already gone (partial prior run); just update pointer
+                    UserDefaults.standard.set(newURL.path,
+                                              forKey: backupLocationDefaultsKey)
+                    print("[Migration] Source absent, updated BackupLocation pointer")
+                }
+            }
+            // Paths not ending in "IMAPBackup" are custom locations — leave untouched
+        }
+        // No saved location → fresh install, new code default handles it
+
+        if success {
+            UserDefaults.standard.set(true, forKey: fileSystemMigrationKey)
+            UserDefaults.standard.synchronize()
+            print("[Migration] File system migration completed successfully")
+        } else {
+            print("[Migration] File system migration had errors — will retry on next launch")
+        }
     }
 
     // MARK: - UserDefaults Migration

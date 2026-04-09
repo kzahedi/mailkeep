@@ -9,6 +9,7 @@ struct IMAPBackupApp: App {
         // Run migration synchronously before initializing BackupManager
         // This ensures old data is migrated before the app tries to load it
         MigrationService.migrateIfNeeded()
+        MigrationService.migrateFileSystemIfNeeded()
 
         // Now initialize BackupManager with migrated data
         _backupManager = StateObject(wrappedValue: BackupManager())
