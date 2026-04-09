@@ -8,13 +8,6 @@ Supports Gmail (OAuth2 and App Passwords), IONOS, and any custom IMAP server.
 ![Swift](https://img.shields.io/badge/Swift-5.9+-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Screenshots
-
-| Main Window | Menubar |
-|:-----------:|:-------:|
-| ![Main Window](docs/screenshots/backup-progress.png) | ![Menubar](docs/screenshots/menubar-popup.png) |
-| Real-time backup progress with download speed, ETA, and folder statistics | Quick access from menubar showing all accounts and backup status |
-
 ## Features
 
 ### Core Backup Features
