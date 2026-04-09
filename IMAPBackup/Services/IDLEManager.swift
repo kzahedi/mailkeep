@@ -72,11 +72,11 @@ actor IDLEManager {
                     case .exists:
                         // Fetch UIDs greater than lastUID
                         let newUIDs = try await service.fetchNewUIDs(after: lastUID)
+                        guard !Task.isCancelled else { break idleLoop }
                         if !newUIDs.isEmpty {
                             lastUID = newUIDs.max() ?? lastUID
                             logInfo("IDLE: \(newUIDs.count) new message(s) for \(account.email)")
-                            let callback = onNewMailCallbacks[account.id]
-                            callback?(account.id)
+                            onNewMailCallbacks[account.id]?(account.id)
                         }
                         // Re-enter IDLE (loop continues)
 
@@ -94,7 +94,11 @@ actor IDLEManager {
             } catch {
                 guard !Task.isCancelled else { break }
                 logWarning("IDLE: error for \(account.email): \(error.localizedDescription). Retrying in 30s.")
-                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                do {
+                    try await Task.sleep(nanoseconds: 30_000_000_000)
+                } catch {
+                    break  // Task cancelled during sleep — exit immediately
+                }
             }
         }
 
