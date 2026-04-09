@@ -65,7 +65,7 @@ class BackupManager: ObservableObject {
             self.backupLocation = documentsURL.appendingPathComponent("MailKeep")
         }
 
-        // Load saved accounts and schedule
+        // Load saved accounts and schedule — must run before startIDLEMonitoring
         loadAccounts()
         loadSchedule()
 
