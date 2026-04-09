@@ -71,7 +71,7 @@ actor IMAPService {
     private var connection: NWConnection?
     private var isConnected = false
     private var responseBuffer = ""
-    private var tagCounter = 0
+    var tagCounter = 0
     private var currentFolder: String?
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 3
@@ -704,6 +704,32 @@ actor IMAPService {
         return uids
     }
 
+    // MARK: - Internal helpers for extension files
+
+    /// Generate the next IMAP command tag (e.g., "A0001").
+    /// Shared with IMAPService+IDLE.swift for non-standard send/receive patterns.
+    func nextTag() -> String {
+        tagCounter += 1
+        return "A\(String(format: "%04d", tagCounter))"
+    }
+
+    /// Send raw bytes over the connection without automatic tag handling.
+    /// Use for commands with non-standard send/receive sequences (e.g., IDLE, DONE).
+    func sendRaw(_ string: String) async throws {
+        guard let connection = connection else {
+            throw IMAPError.notConnected
+        }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            connection.send(content: string.data(using: .utf8), completion: .contentProcessed { error in
+                if let error = error {
+                    continuation.resume(throwing: IMAPError.sendFailed(error.localizedDescription))
+                } else {
+                    continuation.resume()
+                }
+            })
+        }
+    }
+
     // MARK: - Low-level Communication
 
     private func sendCommand(_ command: String) async throws -> String {
@@ -770,7 +796,7 @@ actor IMAPService {
         return fullResponse
     }
 
-    private func readResponse() async throws -> String {
+    func readResponse() async throws -> String {
         guard let connection = connection else {
             throw IMAPError.notConnected
         }
@@ -877,7 +903,7 @@ actor IMAPService {
         return headers
     }
 
-    private func parseSearchResponse(_ response: String) -> [UInt32] {
+    func parseSearchResponse(_ response: String) -> [UInt32] {
         var uids: [UInt32] = []
         let lines = response.components(separatedBy: "\r\n")
 
@@ -986,6 +1012,7 @@ enum IMAPError: LocalizedError {
     case receiveFailed(String)
     case folderNotFound(String)
     case fetchFailed(String)
+    case commandFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -1005,6 +1032,8 @@ enum IMAPError: LocalizedError {
             return "Folder not found: \(name)"
         case .fetchFailed(let reason):
             return "Failed to fetch email: \(reason)"
+        case .commandFailed(let reason):
+            return "Command failed: \(reason)"
         }
     }
 }
