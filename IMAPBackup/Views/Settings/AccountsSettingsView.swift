@@ -109,6 +109,8 @@ struct EditAccountView: View {
     @State private var imapServer: String
     @State private var port: String
     @State private var useSSL: Bool
+    @AppStorage("idleEnabled") private var globalIDLEEnabled = false
+    @State private var idleEnabled: Bool
 
     @State private var isTesting = false
     @State private var testResult: TestResult?
@@ -131,6 +133,7 @@ struct EditAccountView: View {
         _imapServer = State(initialValue: account.imapServer)
         _port = State(initialValue: String(account.port))
         _useSSL = State(initialValue: account.useSSL)
+        _idleEnabled = State(initialValue: account.idleEnabled ?? true)
     }
 
     var body: some View {
@@ -216,6 +219,17 @@ struct EditAccountView: View {
                     TextField("IMAP Server", text: $imapServer)
                     TextField("Port", text: $port)
                     Toggle("Use SSL/TLS", isOn: $useSSL)
+                }
+
+                // Real-time monitoring — available for all account types
+                Section {
+                    Toggle("Real-Time Monitoring", isOn: $idleEnabled)
+                        .disabled(!globalIDLEEnabled)
+                    if !globalIDLEEnabled {
+                        Text("Enable \"Monitor Inbox for New Mail\" in Settings → Schedule first.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -339,6 +353,7 @@ struct EditAccountView: View {
         updatedAccount.imapServer = imapServer
         updatedAccount.port = Int(port) ?? 993
         updatedAccount.useSSL = useSSL
+        updatedAccount.idleEnabled = idleEnabled
 
         // Update password only if a new one was provided
         let newPassword = password.isEmpty ? nil : password
