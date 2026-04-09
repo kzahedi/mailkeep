@@ -192,7 +192,7 @@ struct EditAccountView: View {
                                     .foregroundStyle(.green)
                                     .font(.caption)
                             case .failure(let message):
-                                Text(message)
+                                Label(message, systemImage: "xmark.circle.fill")
                                     .foregroundStyle(.red)
                                     .font(.caption)
                             }
@@ -347,6 +347,7 @@ struct EditAccountView: View {
         dismiss()
     }
 
+    @MainActor
     func reauthorize() {
         isReauthorizing = true
         reauthorizeResult = nil
