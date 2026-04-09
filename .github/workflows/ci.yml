@@ -20,6 +20,19 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Generate OAuthSecrets.swift
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          cat > IMAPBackup/Resources/OAuthSecrets.swift <<EOF
+          import Foundation
+          enum OAuthSecrets {
+              static let googleClientId = "$GOOGLE_CLIENT_ID"
+              static let googleClientSecret = "$GOOGLE_CLIENT_SECRET"
+          }
+          EOF
+
       - name: Build
         run: |
           xcodebuild -scheme IMAPBackup \
