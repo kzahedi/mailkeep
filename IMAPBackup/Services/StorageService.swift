@@ -585,7 +585,7 @@ class BackupLocationManager: ObservableObject {
            let url = URL(string: savedPath) {
             self.backupURL = url
         } else {
-            // Default to Documents/IMAPBackup
+            // Default to Documents/MailKeep
             let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             self.backupURL = documentsURL.appendingPathComponent("MailKeep")
         }
