@@ -130,4 +130,4 @@ Replaces the existing "To change the Google account, delete this account and add
 
 - Renaming the Xcode target / Swift module from `IMAPBackup` to `MailKeep`
 - Migrating iCloud backup data (iCloud renames require coordination with CloudKit; the path update in code is sufficient for new writes)
-- Any changes to `rbh@ghazi-zahedi.de` password — that is a credentials issue, not a code issue
+- Fixing stale IMAP passwords for non-OAuth accounts — that is a credentials issue, not a code issue
