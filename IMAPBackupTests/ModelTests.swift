@@ -471,4 +471,38 @@ final class ModelTests: XCTestCase {
 
         XCTAssertNotEqual(error1.id, error2.id)
     }
+
+    // MARK: - EmailAccount IDLE Tests
+
+    func testEmailAccountIDLEEnabledDefaultsToNil() {
+        let account = EmailAccount(
+            email: "test@example.com",
+            imapServer: "imap.example.com",
+            port: 993
+        )
+        XCTAssertNil(account.idleEnabled)
+    }
+
+    func testEmailAccountIDLEEnabledRoundTrip() throws {
+        var account = EmailAccount(
+            email: "test@example.com",
+            imapServer: "imap.example.com",
+            port: 993
+        )
+        account.idleEnabled = false
+
+        let data = try JSONEncoder().encode(account)
+        let decoded = try JSONDecoder().decode(EmailAccount.self, from: data)
+        XCTAssertEqual(decoded.idleEnabled, false)
+    }
+
+    func testEmailAccountIDLEEnabledOmittedInOldJSON() throws {
+        let json = """
+        {"id":"00000000-0000-0000-0000-000000000001","email":"a@b.com",
+         "imapServer":"imap.example.com","port":993,"username":"a@b.com",
+         "useSSL":true,"isEnabled":true,"authType":"password"}
+        """.data(using: .utf8)!
+        let account = try JSONDecoder().decode(EmailAccount.self, from: json)
+        XCTAssertNil(account.idleEnabled)
+    }
 }

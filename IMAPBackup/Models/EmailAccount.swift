@@ -58,6 +58,7 @@ struct EmailAccount: Identifiable, Codable, Hashable {
     var isEnabled: Bool
     var lastBackupDate: Date?
     var authType: AuthenticationType
+    var idleEnabled: Bool?
 
     // Password is stored in Keychain, not in this struct
     // This property is only used during account creation/update
@@ -83,7 +84,7 @@ struct EmailAccount: Identifiable, Codable, Hashable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, email, imapServer, port, username, useSSL, isEnabled, lastBackupDate, authType
+        case id, email, imapServer, port, username, useSSL, isEnabled, lastBackupDate, authType, idleEnabled
         // Note: password is excluded from Codable
     }
 
@@ -100,6 +101,7 @@ struct EmailAccount: Identifiable, Codable, Hashable {
         lastBackupDate = try container.decodeIfPresent(Date.self, forKey: .lastBackupDate)
         // Default to password auth for older accounts
         authType = try container.decodeIfPresent(AuthenticationType.self, forKey: .authType) ?? .password
+        idleEnabled = try container.decodeIfPresent(Bool.self, forKey: .idleEnabled)
     }
 
     init(
@@ -112,7 +114,8 @@ struct EmailAccount: Identifiable, Codable, Hashable {
         useSSL: Bool = true,
         isEnabled: Bool = true,
         lastBackupDate: Date? = nil,
-        authType: AuthenticationType = .password
+        authType: AuthenticationType = .password,
+        idleEnabled: Bool? = nil
     ) {
         self.id = id
         self.email = email
@@ -124,6 +127,7 @@ struct EmailAccount: Identifiable, Codable, Hashable {
         self.isEnabled = isEnabled
         self.lastBackupDate = lastBackupDate
         self.authType = authType
+        self.idleEnabled = idleEnabled
     }
 
     /// Get password from Keychain
