@@ -610,61 +610,85 @@ actor IMAPService {
         // Read response and stream to file
         var totalBytesWritten: Int64 = 0
         var headerBuffer = ""
-        var foundLiteralSize = false
         var literalSize: Int = 0
         var literalBytesReceived: Int = 0
         var isComplete = false
 
+        // Phase 1: String-based header scan to locate {size}\r\n.
+        // IMAP headers and status lines are ASCII, so readResponse() is safe here.
+        // readResponse() now falls back to .isoLatin1 so non-ASCII server text won't
+        // stall the loop by returning "".
         while !isComplete {
             let chunk = try await readResponse()
+            headerBuffer += chunk
 
-            if !foundLiteralSize {
-                // Still looking for the literal size in the header
-                headerBuffer += chunk
+            if let braceStart = headerBuffer.range(of: "{"),
+               let braceEnd = headerBuffer.range(of: "}", range: braceStart.upperBound..<headerBuffer.endIndex) {
 
-                // Look for {size} pattern
-                if let braceStart = headerBuffer.range(of: "{"),
-                   let braceEnd = headerBuffer.range(of: "}", range: braceStart.upperBound..<headerBuffer.endIndex) {
+                let sizeString = String(headerBuffer[braceStart.upperBound..<braceEnd.lowerBound])
+                if let size = Int(sizeString) {
+                    literalSize = size
+                    logDebug("Streaming email UID \(uid): \(size) bytes")
 
-                    let sizeString = String(headerBuffer[braceStart.upperBound..<braceEnd.lowerBound])
-                    if let size = Int(sizeString) {
-                        literalSize = size
-                        foundLiteralSize = true
-                        logDebug("Streaming email UID \(uid): \(size) bytes")
-
-                        // Find where the actual data starts (after }\r\n)
-                        if let dataStart = headerBuffer.range(of: "}\r\n")?.upperBound {
-                            let remainingData = String(headerBuffer[dataStart...])
-                            if let data = remainingData.data(using: .utf8) ?? remainingData.data(using: .ascii) {
-                                let bytesToWrite = min(data.count, literalSize)
-                                if bytesToWrite > 0 {
-                                    try fileHandle.write(contentsOf: data.prefix(bytesToWrite))
-                                    literalBytesReceived += bytesToWrite
-                                    totalBytesWritten += Int64(bytesToWrite)
-                                }
+                    // Write any body bytes that arrived in the same chunk as the header.
+                    // Use .isoLatin1 (bijective for all 256 byte values) so binary bytes
+                    // in the pre-body overshoot are preserved exactly (C3).
+                    if let dataStart = headerBuffer.range(of: "}\r\n")?.upperBound {
+                        let remainingStr = String(headerBuffer[dataStart...])
+                        if let data = remainingStr.data(using: .isoLatin1) {
+                            let bytesToWrite = min(data.count, literalSize)
+                            if bytesToWrite > 0 {
+                                try fileHandle.write(contentsOf: data.prefix(bytesToWrite))
+                                literalBytesReceived += bytesToWrite
+                                totalBytesWritten += Int64(bytesToWrite)
                             }
                         }
                     }
+                    break  // Found literal size — switch to raw Data phase
                 }
-            } else {
-                // Streaming mode - write data directly to file
-                let bytesRemaining = literalSize - literalBytesReceived
+            }
 
-                if bytesRemaining > 0 {
-                    if let data = chunk.data(using: .utf8) ?? chunk.data(using: .ascii) {
-                        let bytesToWrite = min(data.count, bytesRemaining)
-                        if bytesToWrite > 0 {
-                            try fileHandle.write(contentsOf: data.prefix(bytesToWrite))
-                            literalBytesReceived += bytesToWrite
-                            totalBytesWritten += Int64(bytesToWrite)
-                        }
+            // Tagged response may arrive in the same chunk as the header (e.g. empty body)
+            if chunk.contains("\(tag) OK") || chunk.contains("\(tag) NO") || chunk.contains("\(tag) BAD") {
+                isComplete = true
+            }
+        }
+
+        // Phase 2: Raw Data receive loop — reads bytes directly from NWConnection without
+        // any String conversion, so binary email content is written to disk intact (C3).
+        while !isComplete {
+            let rawData: Data = try await withCheckedThrowingContinuation { continuation in
+                connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
+                    if let error = error {
+                        continuation.resume(throwing: IMAPError.receiveFailed(error.localizedDescription))
+                    } else if let data = data, !data.isEmpty {
+                        continuation.resume(returning: data)
+                    } else {
+                        continuation.resume(throwing: IMAPError.receiveFailed("No data received"))
                     }
                 }
             }
 
-            // Check for completion
-            if chunk.contains("\(tag) OK") || chunk.contains("\(tag) NO") || chunk.contains("\(tag) BAD") {
-                isComplete = true
+            // Write body bytes up to the declared literal size
+            let bytesRemaining = literalSize - literalBytesReceived
+            if bytesRemaining > 0 {
+                let bytesToWrite = min(rawData.count, bytesRemaining)
+                if bytesToWrite > 0 {
+                    try fileHandle.write(contentsOf: rawData.prefix(bytesToWrite))
+                    literalBytesReceived += bytesToWrite
+                    totalBytesWritten += Int64(bytesToWrite)
+                }
+            }
+
+            // Check for the IMAP tagged response after all body bytes are received.
+            // The tagged response is ASCII; searching raw bytes for the tag is safe.
+            if literalBytesReceived >= literalSize {
+                let tagBytes = Data(tag.utf8)
+                if rawData.range(of: tagBytes + Data(" OK".utf8)) != nil ||
+                   rawData.range(of: tagBytes + Data(" NO".utf8)) != nil ||
+                   rawData.range(of: tagBytes + Data(" BAD".utf8)) != nil {
+                    isComplete = true
+                }
             }
         }
 
@@ -809,7 +833,14 @@ actor IMAPService {
                     return
                 }
 
-                if let data = data, let response = String(data: data, encoding: .utf8) {
+                if let data = data, !data.isEmpty {
+                    // Attempt UTF-8 first; fall back to ISO Latin-1 which is bijective over
+                    // all 256 byte values and never fails. This prevents non-UTF-8 bytes
+                    // (binary attachments, non-UTF-8 server error text) from returning ""
+                    // and causing while-true read loops to spin forever (C2).
+                    let response = String(data: data, encoding: .utf8)
+                        ?? String(data: data, encoding: .isoLatin1)
+                        ?? ""
                     trace("readResponse: got \(data.count) bytes")
                     continuation.resume(returning: response)
                 } else {
