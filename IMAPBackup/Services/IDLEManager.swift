@@ -55,6 +55,9 @@ actor IDLEManager {
     private func runMonitor(for account: EmailAccount) async {
         while !Task.isCancelled {
             let service = IMAPService(account: account)
+            let rateLimitSettings = await RateLimitService.shared.getSettings(for: account.id)
+            let sharedTracker = await RateLimitService.shared.getTracker(forServer: account.imapServer, accountId: account.id)
+            await service.configureRateLimit(settings: rateLimitSettings, sharedTracker: sharedTracker)
             do {
                 try await service.connect()
                 try await service.login()

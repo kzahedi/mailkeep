@@ -71,9 +71,13 @@ extension IMAPService {
                 }
             }
 
-            // Timeout task: fire after `timeout` seconds
-            group.addTask {
+            // Timeout task: fire after `timeout` seconds.
+            // RFC 2177 §3: send DONE before the connection closes so the server can
+            // cleanly end the IDLE session; wrap in try? so a dead connection does
+            // not prevent .timeout from being returned.
+            group.addTask { [self] in
                 try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                try? await sendRaw("DONE\r\n")
                 return IDLENotification.timeout
             }
 
@@ -128,7 +132,9 @@ extension IMAPService {
         while true {
             let chunk = try await readResponse()
             if chunk.contains("\(idleTag) OK") { return }
-            if chunk.contains("\(idleTag) NO") { return }
+            if chunk.contains("\(idleTag) NO") {
+                throw IMAPError.commandFailed("DONE rejected with NO: \(chunk.trimmingCharacters(in: .whitespacesAndNewlines))")
+            }
             if chunk.contains("\(idleTag) BAD") {
                 throw IMAPError.commandFailed("DONE rejected: \(chunk.trimmingCharacters(in: .whitespacesAndNewlines))")
             }
