@@ -76,12 +76,12 @@ jobs:
       - name: Create app bundle directory
         run: |
           mkdir -p dist
-          cp -R "build/Build/Products/Release/IMAPBackup.app" dist/
+          cp -R "build/Build/Products/Release/MailKeep.app" dist/
 
       - name: Create DMG
         run: |
           mkdir -p dmg-contents
-          cp -R dist/IMAPBackup.app dmg-contents/
+          cp -R dist/MailKeep.app dmg-contents/
           ln -s /Applications dmg-contents/Applications
           hdiutil create -volname "IMAP Backup" \
             -srcfolder dmg-contents \
@@ -119,7 +119,7 @@ jobs:
 
             > **First launch on macOS:** macOS will block the app because it is not notarized. Right-click the app and choose **Open**, then click **Open** in the dialog. Alternatively, run:
             > ```
-            > xattr -dr com.apple.quarantine /Applications/IMAPBackup.app
+            > xattr -dr com.apple.quarantine /Applications/MailKeep.app
             > ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -141,7 +141,7 @@ jobs:
 
             > **First launch on macOS:** macOS will block the app because it is not notarized. Right-click the app and choose **Open**, then click **Open** in the dialog. Alternatively, run:
             > ```
-            > xattr -dr com.apple.quarantine /Applications/IMAPBackup.app
+            > xattr -dr com.apple.quarantine /Applications/MailKeep.app
             > ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
