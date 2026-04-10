@@ -6,36 +6,41 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Build and Test
     runs-on: macos-14
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+        uses: maxim-lobanov/setup-xcode@1242409711ff5721add51979e9e11e23ebb7e5a4 # v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '16.2'
 
       - name: Generate OAuthSecrets.swift
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
-          cat > IMAPBackup/Resources/OAuthSecrets.swift <<EOF
-          import Foundation
-          enum OAuthSecrets {
-              static let googleClientId = "$GOOGLE_CLIENT_ID"
-              static let googleClientSecret = "$GOOGLE_CLIENT_SECRET"
-          }
-          EOF
+          printf 'import Foundation\nenum OAuthSecrets {\n    static let googleClientId = "%s"\n    static let googleClientSecret = "%s"\n}\n' \
+            "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET" \
+            > IMAPBackup/Resources/OAuthSecrets.swift
 
       - name: Build
         run: |
-          xcodebuild -scheme IMAPBackup \
+          xcodebuild -project IMAPBackup.xcodeproj \
+            -scheme IMAPBackup \
             -configuration Debug \
             -destination 'platform=macOS' \
             CODE_SIGN_IDENTITY="-" \
@@ -45,9 +50,11 @@ jobs:
 
       - name: Run tests
         run: |
-          xcodebuild test -scheme IMAPBackup \
+          set -o pipefail
+          xcodebuild test \
+            -project IMAPBackup.xcodeproj \
+            -scheme IMAPBackup \
             -destination 'platform=macOS' \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty --color || true
+            CODE_SIGNING_ALLOWED=NO

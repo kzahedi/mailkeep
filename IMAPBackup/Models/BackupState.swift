@@ -57,7 +57,7 @@ enum BackupStatus: String, Codable {
     case connecting = "Connecting..."
     case fetchingFolders = "Fetching folders..."
     case counting = "Counting emails..."
-    case scanning = "Scanning folder..."
+    case scanning = "Scanning emails..."
     case downloading = "Downloading..."
     case completed = "Completed"
     case failed = "Failed"
