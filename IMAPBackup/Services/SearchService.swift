@@ -639,7 +639,9 @@ actor SearchService {
     }
 
     private func extractPathInfo(from url: URL) -> (accountId: String, mailbox: String) {
-        let relativePath = url.path.replacingOccurrences(of: backupLocation.path + "/", with: "")
+        let resolvedBase = backupLocation.resolvingSymlinksInPath().path
+        let resolvedPath = url.resolvingSymlinksInPath().path
+        let relativePath = resolvedPath.replacingOccurrences(of: resolvedBase + "/", with: "")
         let components = relativePath.components(separatedBy: "/")
 
         guard components.count >= 2 else {
