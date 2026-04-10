@@ -1,5 +1,5 @@
 import XCTest
-@testable import IMAPBackup
+@testable import MailKeep
 
 /// Tests for the binary-data-safety fixes (C2 + C3).
 ///

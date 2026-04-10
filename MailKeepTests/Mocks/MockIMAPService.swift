@@ -1,5 +1,5 @@
 import Foundation
-@testable import IMAPBackup
+@testable import MailKeep
 
 /// Mock IMAP service for unit testing without a real server
 actor MockIMAPService: IMAPServiceProtocol {

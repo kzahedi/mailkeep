@@ -1,5 +1,5 @@
 import XCTest
-@testable import IMAPBackup
+@testable import MailKeep
 
 final class AttachmentServiceTests: XCTestCase {
 

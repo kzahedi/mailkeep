@@ -1,5 +1,5 @@
 import XCTest
-@testable import IMAPBackup
+@testable import MailKeep
 
 @MainActor
 final class BackupManagerIDLETests: XCTestCase {

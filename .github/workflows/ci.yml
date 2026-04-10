@@ -35,12 +35,12 @@ jobs:
         run: |
           printf 'import Foundation\nenum OAuthSecrets {\n    static let googleClientId = "%s"\n    static let googleClientSecret = "%s"\n}\n' \
             "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET" \
-            > IMAPBackup/Resources/OAuthSecrets.swift
+            > MailKeep/Resources/OAuthSecrets.swift
 
       - name: Build
         run: |
-          xcodebuild -project IMAPBackup.xcodeproj \
-            -scheme IMAPBackup \
+          xcodebuild -project MailKeep.xcodeproj \
+            -scheme MailKeep \
             -configuration Debug \
             -destination 'platform=macOS' \
             CODE_SIGN_IDENTITY="-" \
@@ -52,8 +52,8 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -project IMAPBackup.xcodeproj \
-            -scheme IMAPBackup \
+            -project MailKeep.xcodeproj \
+            -scheme MailKeep \
             -destination 'platform=macOS' \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \

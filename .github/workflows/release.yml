@@ -54,17 +54,17 @@ jobs:
         run: |
           printf 'import Foundation\nenum OAuthSecrets {\n    static let googleClientId = "%s"\n    static let googleClientSecret = "%s"\n}\n' \
             "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET" \
-            > IMAPBackup/Resources/OAuthSecrets.swift
+            > MailKeep/Resources/OAuthSecrets.swift
 
       - name: Update version in project
         run: |
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" IMAPBackup/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" IMAPBackup/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" MailKeep/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" MailKeep/Resources/Info.plist
 
       - name: Build application
         run: |
-          xcodebuild -project IMAPBackup.xcodeproj \
-            -scheme IMAPBackup \
+          xcodebuild -project MailKeep.xcodeproj \
+            -scheme MailKeep \
             -configuration Release \
             -derivedDataPath build \
             -destination 'platform=macOS' \
@@ -86,14 +86,14 @@ jobs:
           hdiutil create -volname "IMAP Backup" \
             -srcfolder dmg-contents \
             -ov -format UDZO \
-            "IMAPBackup-${{ steps.version.outputs.version }}.dmg"
+            "MailKeep-${{ steps.version.outputs.version }}.dmg"
           rm -rf dmg-contents
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: IMAPBackup-${{ steps.version.outputs.version }}
-          path: IMAPBackup-${{ steps.version.outputs.version }}.dmg
+          name: MailKeep-${{ steps.version.outputs.version }}
+          path: MailKeep-${{ steps.version.outputs.version }}.dmg
           retention-days: 90
 
       - name: Create tag for manual dispatch
@@ -108,14 +108,14 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
-          files: IMAPBackup-${{ steps.version.outputs.version }}.dmg
+          files: MailKeep-${{ steps.version.outputs.version }}.dmg
           generate_release_notes: true
           draft: false
           prerelease: false
           body: |
             ## Installation
 
-            Download `IMAPBackup-${{ steps.version.outputs.version }}.dmg`, open it, and drag **IMAPBackup** to your Applications folder.
+            Download `MailKeep-${{ steps.version.outputs.version }}.dmg`, open it, and drag **MailKeep** to your Applications folder.
 
             > **First launch on macOS:** macOS will block the app because it is not notarized. Right-click the app and choose **Open**, then click **Open** in the dialog. Alternatively, run:
             > ```
@@ -130,14 +130,14 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
-          files: IMAPBackup-${{ steps.version.outputs.version }}.dmg
+          files: MailKeep-${{ steps.version.outputs.version }}.dmg
           generate_release_notes: true
           draft: false
           prerelease: false
           body: |
             ## Installation
 
-            Download `IMAPBackup-${{ steps.version.outputs.version }}.dmg`, open it, and drag **IMAPBackup** to your Applications folder.
+            Download `MailKeep-${{ steps.version.outputs.version }}.dmg`, open it, and drag **MailKeep** to your Applications folder.
 
             > **First launch on macOS:** macOS will block the app because it is not notarized. Right-click the app and choose **Open**, then click **Open** in the dialog. Alternatively, run:
             > ```

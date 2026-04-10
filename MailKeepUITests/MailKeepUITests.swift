@@ -1,6 +1,6 @@
 import XCTest
 
-final class IMAPBackupUITests: XCTestCase {
+final class MailKeepUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }

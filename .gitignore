@@ -34,3 +34,4 @@ credentials.json
 
 # OAuth secrets - do not commit
 IMAPBackup/Resources/OAuthSecrets.swift
+MailKeep/Resources/OAuthSecrets.swift

@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B10000060000000000000001"
-               BuildableName = "IMAPBackup.app"
-               BlueprintName = "IMAPBackup"
-               ReferencedContainer = "container:IMAPBackup.xcodeproj">
+               BuildableName = "MailKeep.app"
+               BlueprintName = "MailKeep"
+               ReferencedContainer = "container:MailKeep.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -29,9 +29,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C10000060000000000000001"
-               BuildableName = "IMAPBackupTests.xctest"
-               BlueprintName = "IMAPBackupTests"
-               ReferencedContainer = "container:IMAPBackup.xcodeproj">
+               BuildableName = "MailKeepTests.xctest"
+               BlueprintName = "MailKeepTests"
+               ReferencedContainer = "container:MailKeep.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -48,9 +48,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C10000060000000000000001"
-               BuildableName = "IMAPBackupTests.xctest"
-               BlueprintName = "IMAPBackupTests"
-               ReferencedContainer = "container:IMAPBackup.xcodeproj">
+               BuildableName = "MailKeepTests.xctest"
+               BlueprintName = "MailKeepTests"
+               ReferencedContainer = "container:MailKeep.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -70,9 +70,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B10000060000000000000001"
-            BuildableName = "IMAPBackup.app"
-            BlueprintName = "IMAPBackup"
-            ReferencedContainer = "container:IMAPBackup.xcodeproj">
+            BuildableName = "MailKeep.app"
+            BlueprintName = "MailKeep"
+            ReferencedContainer = "container:MailKeep.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -87,9 +87,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B10000060000000000000001"
-            BuildableName = "IMAPBackup.app"
-            BlueprintName = "IMAPBackup"
-            ReferencedContainer = "container:IMAPBackup.xcodeproj">
+            BuildableName = "MailKeep.app"
+            BlueprintName = "MailKeep"
+            ReferencedContainer = "container:MailKeep.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

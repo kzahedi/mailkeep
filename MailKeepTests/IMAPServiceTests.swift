@@ -1,5 +1,5 @@
 import XCTest
-@testable import IMAPBackup
+@testable import MailKeep
 
 /// Unit tests for IMAP operations using MockIMAPService
 final class IMAPServiceTests: XCTestCase {
