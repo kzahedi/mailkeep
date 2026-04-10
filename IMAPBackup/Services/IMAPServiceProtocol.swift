@@ -20,9 +20,6 @@ protocol IMAPServiceProtocol {
     /// Select a folder for operations
     func selectFolder(_ folder: String) async throws -> FolderStatus
 
-    /// Fetch email headers for a range of UIDs
-    func fetchEmailHeaders(uids: ClosedRange<UInt32>) async throws -> [EmailHeader]
-
     /// Fetch complete email data by UID
     func fetchEmail(uid: UInt32) async throws -> Data
 

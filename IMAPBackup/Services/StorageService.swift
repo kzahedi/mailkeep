@@ -572,31 +572,3 @@ actor StorageService {
         return count
     }
 }
-
-// MARK: - Backup Location Manager
-
-class BackupLocationManager: ObservableObject {
-    @Published var backupURL: URL
-
-    private let defaultsKey = "BackupLocation"
-
-    init() {
-        if let savedPath = UserDefaults.standard.string(forKey: defaultsKey),
-           let url = URL(string: savedPath) {
-            self.backupURL = url
-        } else {
-            // Default to Documents/MailKeep
-            let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            self.backupURL = documentsURL.appendingPathComponent("MailKeep")
-        }
-
-        // Ensure directory exists
-        try? FileManager.default.createDirectory(at: backupURL, withIntermediateDirectories: true)
-    }
-
-    func setBackupLocation(_ url: URL) {
-        backupURL = url
-        UserDefaults.standard.set(url.absoluteString, forKey: defaultsKey)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-    }
-}

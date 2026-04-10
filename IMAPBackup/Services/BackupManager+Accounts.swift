@@ -116,8 +116,11 @@ extension BackupManager {
     }
 
     func saveAccounts() {
-        if let encoded = try? JSONEncoder().encode(accounts) {
+        do {
+            let encoded = try JSONEncoder().encode(accounts)
             UserDefaults.standard.set(encoded, forKey: accountsKey)
+        } catch {
+            logError("saveAccounts encoding failed: \(error)")
         }
     }
 }

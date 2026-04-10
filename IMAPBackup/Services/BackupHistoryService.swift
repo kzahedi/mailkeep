@@ -8,9 +8,11 @@ class BackupHistoryService: ObservableObject {
     @Published private(set) var entries: [BackupHistoryEntry] = []
 
     private let maxEntries = 100
-    private let historyKey = "BackupHistory"
+    /// Legacy key — used only for one-time migration from UserDefaults to the file store.
+    private let legacyHistoryKey = "BackupHistory"
 
     private init() {
+        migrateFromUserDefaultsIfNeeded()
         loadHistory()
     }
 
@@ -70,17 +72,60 @@ class BackupHistoryService: ObservableObject {
 
     // MARK: - Persistence
 
+    /// URL for `backup_history.json` in Application Support.
+    private func historyFileURL() -> URL? {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask
+        ).first else { return nil }
+        let dir = appSupport.appendingPathComponent("MailKeep", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("backup_history.json")
+    }
+
     private func loadHistory() {
-        if let data = UserDefaults.standard.data(forKey: historyKey),
-           let decoded = try? JSONDecoder().decode([BackupHistoryEntry].self, from: data) {
-            entries = decoded
+        guard let url = historyFileURL() else {
+            logError("BackupHistoryService: could not resolve history file URL")
+            return
+        }
+        do {
+            let data = try Data(contentsOf: url)
+            entries = try JSONDecoder().decode([BackupHistoryEntry].self, from: data)
+        } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
+            // First run — file not yet created; start with empty entries.
+        } catch {
+            logError("BackupHistoryService: failed to load history: \(error)")
+            entries = []
         }
     }
 
     private func saveHistory() {
-        if let encoded = try? JSONEncoder().encode(entries) {
-            UserDefaults.standard.set(encoded, forKey: historyKey)
+        guard let url = historyFileURL() else {
+            logError("BackupHistoryService: could not resolve history file URL for save")
+            return
         }
+        do {
+            let data = try JSONEncoder().encode(entries)
+            try data.write(to: url, options: .atomic)
+        } catch {
+            logError("BackupHistoryService: failed to save history: \(error)")
+        }
+    }
+
+    /// One-time migration: if a legacy UserDefaults entry exists and the file store is
+    /// not yet present, copy the entries to the file store and remove the UserDefaults key.
+    private func migrateFromUserDefaultsIfNeeded() {
+        guard let url = historyFileURL(),
+              !FileManager.default.fileExists(atPath: url.path) else { return }
+
+        guard let data = UserDefaults.standard.data(forKey: legacyHistoryKey),
+              let decoded = try? JSONDecoder().decode([BackupHistoryEntry].self, from: data) else {
+            return
+        }
+
+        if let encoded = try? JSONEncoder().encode(decoded) {
+            try? encoded.write(to: url, options: .atomic)
+        }
+        UserDefaults.standard.removeObject(forKey: legacyHistoryKey)
     }
 
     private func trimOldEntries() {

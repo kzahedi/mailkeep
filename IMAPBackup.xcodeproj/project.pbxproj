@@ -36,7 +36,6 @@
 		B1000001000000000000000C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000000C /* SettingsView.swift */; };
 		B1000001000000000000000D /* AddAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000000D /* AddAccountView.swift */; };
 		B1000001000000000000000E /* EmailParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000010 /* EmailParser.swift */; };
-		B10000010000000000000011 /* DatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000011 /* DatabaseService.swift */; };
 		B10000010000000000000012 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000012 /* Assets.xcassets */; };
 		B10000010000000000000013 /* SearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000013 /* SearchService.swift */; };
 		B10000010000000000000014 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000014 /* SearchView.swift */; };
@@ -46,8 +45,8 @@
 		B10000010000000000000018 /* BackupHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000018 /* BackupHistoryEntry.swift */; };
 		B10000010000000000000019 /* BackupHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000019 /* BackupHistoryService.swift */; };
 		B1000001000000000000001A /* BackupHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000001A /* BackupHistoryView.swift */; };
+		B10000010000000000000025 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000025 /* Constants.swift */; };
 		B1000001000000000000001B /* LoggingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000001B /* LoggingService.swift */; };
-		B1000001000000000000002A /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000002A /* Constants.swift */; };
 		B1000001000000000000001C /* RetentionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000001C /* RetentionService.swift */; };
 		B1000001000000000000001D /* RateLimitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000001D /* RateLimitService.swift */; };
 		B1000001000000000000001E /* AttachmentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000001E /* AttachmentService.swift */; };
@@ -55,7 +54,6 @@
 		B10000010000000000000020 /* GoogleOAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000020 /* GoogleOAuthService.swift */; };
 		B10000010000000000000021 /* MigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000021 /* MigrationService.swift */; };
 		C10000010000000000000001 /* EmailParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000001 /* EmailParserTests.swift */; };
-		C10000010000000000000002 /* DatabaseServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000002 /* DatabaseServiceTests.swift */; };
 		C10000010000000000000003 /* SearchServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000003 /* SearchServiceTests.swift */; };
 		C10000010000000000000004 /* StorageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000004 /* StorageServiceTests.swift */; };
 		C10000010000000000000005 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000005 /* ModelTests.swift */; };
@@ -128,7 +126,6 @@
 		B1000002000000000000000F /* IMAPBackup.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IMAPBackup.entitlements; sourceTree = "<group>"; };
 		B10000020000000000000030 /* OAuthSecrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthSecrets.swift; sourceTree = "<group>"; };
 		B10000020000000000000010 /* EmailParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailParser.swift; sourceTree = "<group>"; };
-		B10000020000000000000011 /* DatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseService.swift; sourceTree = "<group>"; };
 		B10000020000000000000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000020000000000000013 /* SearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchService.swift; sourceTree = "<group>"; };
 		B10000020000000000000014 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
@@ -138,8 +135,8 @@
 		B10000020000000000000018 /* BackupHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupHistoryEntry.swift; sourceTree = "<group>"; };
 		B10000020000000000000019 /* BackupHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupHistoryService.swift; sourceTree = "<group>"; };
 		B1000002000000000000001A /* BackupHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupHistoryView.swift; sourceTree = "<group>"; };
+		B10000020000000000000025 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		B1000002000000000000001B /* LoggingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggingService.swift; sourceTree = "<group>"; };
-		B1000002000000000000002A /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		B1000002000000000000001C /* RetentionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetentionService.swift; sourceTree = "<group>"; };
 		B1000002000000000000001D /* RateLimitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RateLimitService.swift; sourceTree = "<group>"; };
 		B1000002000000000000001E /* AttachmentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentService.swift; sourceTree = "<group>"; };
@@ -148,7 +145,6 @@
 		B10000020000000000000021 /* MigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationService.swift; sourceTree = "<group>"; };
 		B10000030000000000000001 /* IMAPBackup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IMAPBackup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000020000000000000001 /* EmailParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailParserTests.swift; sourceTree = "<group>"; };
-		C10000020000000000000002 /* DatabaseServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseServiceTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000003 /* SearchServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchServiceTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000004 /* StorageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageServiceTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000005 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
@@ -240,6 +236,7 @@
 				B10000050000000000000006 /* Services */,
 				B10000050000000000000007 /* Views */,
 				B10000050000000000000008 /* Resources */,
+				B10000020000000000000025 /* Constants.swift */,
 			);
 			path = IMAPBackup;
 			sourceTree = "<group>";
@@ -292,14 +289,12 @@
 				E100000200000002 /* IDLEManager.swift */,
 				E100000200000003 /* BackupManager+IDLE.swift */,
 				B10000020000000000000010 /* EmailParser.swift */,
-				B10000020000000000000011 /* DatabaseService.swift */,
 				B10000020000000000000013 /* SearchService.swift */,
 				B10000020000000000000015 /* KeychainService.swift */,
 				B10000020000000000000016 /* LaunchAtLoginService.swift */,
 				B10000020000000000000017 /* NotificationService.swift */,
 				B10000020000000000000019 /* BackupHistoryService.swift */,
 				B1000002000000000000001B /* LoggingService.swift */,
-				B1000002000000000000002A /* Constants.swift */,
 				B1000002000000000000001C /* RetentionService.swift */,
 				B1000002000000000000001D /* RateLimitService.swift */,
 				B1000002000000000000001E /* AttachmentService.swift */,
@@ -359,7 +354,6 @@
 			children = (
 				C10000050000000000000002 /* IntegrationTests */,
 				C10000020000000000000001 /* EmailParserTests.swift */,
-				C10000020000000000000002 /* DatabaseServiceTests.swift */,
 				C10000020000000000000003 /* SearchServiceTests.swift */,
 				C10000020000000000000004 /* StorageServiceTests.swift */,
 				C10000020000000000000005 /* ModelTests.swift */,
@@ -544,7 +538,6 @@
 				B1000001000000000000000C /* SettingsView.swift in Sources */,
 				B1000001000000000000000D /* AddAccountView.swift in Sources */,
 				B1000001000000000000000E /* EmailParser.swift in Sources */,
-				B10000010000000000000011 /* DatabaseService.swift in Sources */,
 				B10000010000000000000013 /* SearchService.swift in Sources */,
 				B10000010000000000000014 /* SearchView.swift in Sources */,
 				B10000010000000000000015 /* KeychainService.swift in Sources */,
@@ -553,8 +546,8 @@
 				B10000010000000000000018 /* BackupHistoryEntry.swift in Sources */,
 				B10000010000000000000019 /* BackupHistoryService.swift in Sources */,
 				B1000001000000000000001A /* BackupHistoryView.swift in Sources */,
+				B10000010000000000000025 /* Constants.swift in Sources */,
 				B1000001000000000000001B /* LoggingService.swift in Sources */,
-				B1000001000000000000002A /* Constants.swift in Sources */,
 				B1000001000000000000001C /* RetentionService.swift in Sources */,
 				B1000001000000000000001D /* RateLimitService.swift in Sources */,
 				B1000001000000000000001E /* AttachmentService.swift in Sources */,
@@ -578,7 +571,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				C10000010000000000000001 /* EmailParserTests.swift in Sources */,
-				C10000010000000000000002 /* DatabaseServiceTests.swift in Sources */,
 				C10000010000000000000003 /* SearchServiceTests.swift in Sources */,
 				C10000010000000000000004 /* StorageServiceTests.swift in Sources */,
 				C10000010000000000000005 /* ModelTests.swift in Sources */,

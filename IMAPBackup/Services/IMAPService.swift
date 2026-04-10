@@ -204,7 +204,6 @@ actor IMAPService {
 
     func connect() async throws {
         trace("[DEBUG] connect() START for \(account.email)")
-        trace("connect() START for \(account.email)")
         let host = NWEndpoint.Host(account.imapServer)
         let port = NWEndpoint.Port(integerLiteral: UInt16(account.port))
 
@@ -235,7 +234,6 @@ actor IMAPService {
                 switch connectionState {
                 case .ready:
                     trace("[DEBUG] connect() READY")
-                    trace("connect() READY")
                     guard state.tryResume() else { return }
                     Task { [weak self] in
                         await self?.setConnected(true)
@@ -399,12 +397,6 @@ actor IMAPService {
         return parseFolderStatus(response)
     }
 
-    func fetchEmailHeaders(uids: ClosedRange<UInt32>) async throws -> [EmailHeader] {
-        let response = try await sendCommand(
-            "UID FETCH \(uids.lowerBound):\(uids.upperBound) (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)] BODYSTRUCTURE)"
-        )
-        return parseEmailHeaders(response)
-    }
 
     func fetchEmail(uid: UInt32) async throws -> Data {
         // Apply rate limiting before request
@@ -937,13 +929,6 @@ actor IMAPService {
         return FolderStatus(exists: exists, recent: recent, uidNext: uidNext, uidValidity: uidValidity)
     }
 
-    private func parseEmailHeaders(_ response: String) -> [EmailHeader] {
-        // Simplified parsing - in production, use a proper MIME parser
-        var headers: [EmailHeader] = []
-        // TODO: Implement proper FETCH response parsing
-        return headers
-    }
-
     func parseSearchResponse(_ response: String) -> [UInt32] {
         var uids: [UInt32] = []
         let lines = response.components(separatedBy: "\r\n")
@@ -962,53 +947,6 @@ actor IMAPService {
         return uids
     }
 
-    private func extractEmailData(from response: String) -> Data {
-        // Extract the literal email data from FETCH response
-        // IMAP FETCH response format: * UID FETCH (BODY[] {size}\r\n<data>\r\n)
-
-        // Find the literal size marker {size}
-        // Look for pattern like "BODY[] {" or just find the first {digits}
-        guard let braceStart = response.range(of: "{") else {
-            logError("extractEmailData: No '{' found. Response length: \(response.count), preview: \(String(response.prefix(500)))")
-            return Data()
-        }
-
-        guard let braceEnd = response.range(of: "}", range: braceStart.upperBound..<response.endIndex) else {
-            logError("extractEmailData: No '}' found. Response preview: \(String(response.prefix(500)))")
-            return Data()
-        }
-
-        // Parse the size
-        let sizeString = String(response[braceStart.upperBound..<braceEnd.lowerBound])
-        guard let size = Int(sizeString), size > 0 else {
-            logError("extractEmailData: Invalid size '\(sizeString)'. Response preview: \(String(response.prefix(500)))")
-            return Data()
-        }
-
-        // The data starts after }\r\n
-        // Convert to UTF8 bytes for accurate positioning
-        let responseData = Data(response.utf8)
-
-        // Find the position of } in the data
-        let braceEndUtf8Offset = response[..<braceEnd.upperBound].utf8.count
-
-        // Skip past }\r\n (typically 3 bytes: }, \r, \n)
-        var dataStart = braceEndUtf8Offset
-        if dataStart < responseData.count && responseData[dataStart] == 0x0D { // \r
-            dataStart += 1
-        }
-        if dataStart < responseData.count && responseData[dataStart] == 0x0A { // \n
-            dataStart += 1
-        }
-
-        // Extract exactly 'size' bytes
-        let dataEnd = min(dataStart + size, responseData.count)
-        if dataStart < dataEnd {
-            return responseData[dataStart..<dataEnd]
-        }
-
-        return Data()
-    }
 }
 
 // MARK: - Supporting Types
