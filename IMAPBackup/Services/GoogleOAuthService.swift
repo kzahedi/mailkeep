@@ -105,7 +105,7 @@ final class GoogleOAuthService: NSObject {
         let codeChallenge = generateCodeChallenge(from: codeVerifier!)
 
         // Build authorization URL with PKCE
-        let authURL = buildAuthorizationURL(config: config, codeChallenge: codeChallenge)
+        let authURL = try buildAuthorizationURL(config: config, codeChallenge: codeChallenge)
 
         // Present authentication session
         let callbackURL = try await presentAuthSession(url: authURL, callbackScheme: getCallbackScheme(config: config))
@@ -190,7 +190,7 @@ final class GoogleOAuthService: NSObject {
 
     // MARK: - Private Helpers
 
-    private func buildAuthorizationURL(config: Configuration, codeChallenge: String) -> URL {
+    private func buildAuthorizationURL(config: Configuration, codeChallenge: String) throws -> URL {
         var components = URLComponents(string: Configuration.authorizationEndpoint)!
 
         components.queryItems = [
@@ -205,7 +205,10 @@ final class GoogleOAuthService: NSObject {
             URLQueryItem(name: "code_challenge_method", value: "S256")
         ]
 
-        return components.url!
+        guard let url = components.url else {
+            throw GoogleOAuthError.notConfigured
+        }
+        return url
     }
 
     private func getCallbackScheme(config: Configuration) -> String {
@@ -358,7 +361,7 @@ final class GoogleOAuthService: NSObject {
 
     private class PresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
         func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-            return NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first!
+            return NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first ?? NSWindow()
         }
     }
 }

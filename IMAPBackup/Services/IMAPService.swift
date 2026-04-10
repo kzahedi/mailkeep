@@ -214,7 +214,17 @@ actor IMAPService {
 
         connection = NWConnection(host: host, port: port, using: params)
 
-        class ContinuationState { var hasResumed = false }
+        class ContinuationState {
+            private let lock = NSLock()
+            private var _hasResumed = false
+            func tryResume() -> Bool {
+                lock.lock()
+                defer { lock.unlock() }
+                guard !_hasResumed else { return false }
+                _hasResumed = true
+                return true
+            }
+        }
         let state = ContinuationState()
 
         logInfo("Connecting to \(account.imapServer):\(account.port)...")
@@ -222,24 +232,22 @@ actor IMAPService {
         return try await withCheckedThrowingContinuation { continuation in
             connection?.stateUpdateHandler = { [weak self] connectionState in
                 trace("connect() state=\(connectionState)")
-                guard !state.hasResumed else { return }
-
                 switch connectionState {
                 case .ready:
                     trace("[DEBUG] connect() READY")
                     trace("connect() READY")
-                    state.hasResumed = true
+                    guard state.tryResume() else { return }
                     Task { [weak self] in
                         await self?.setConnected(true)
+                        continuation.resume()
                     }
-                    continuation.resume()
                 case .failed(let error):
                     trace("connect() FAILED: \(error)")
-                    state.hasResumed = true
+                    guard state.tryResume() else { return }
                     continuation.resume(throwing: IMAPError.connectionFailed(error.localizedDescription))
                 case .cancelled:
                     trace("connect() CANCELLED")
-                    state.hasResumed = true
+                    guard state.tryResume() else { return }
                     continuation.resume(throwing: IMAPError.connectionCancelled)
                 default:
                     break
@@ -877,9 +885,11 @@ actor IMAPService {
             return nil
         }
 
-        let flagsRange = Range(match.range(at: 1), in: line)!
-        let delimiterRange = Range(match.range(at: 2), in: line)!
-        let nameRange = Range(match.range(at: 3), in: line)!
+        guard let flagsRange = Range(match.range(at: 1), in: line),
+              let delimiterRange = Range(match.range(at: 2), in: line),
+              let nameRange = Range(match.range(at: 3), in: line) else {
+            return nil
+        }
 
         let flags = String(line[flagsRange])
         let delimiter = String(line[delimiterRange])
