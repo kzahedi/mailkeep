@@ -176,11 +176,17 @@ class RateLimitService: ObservableObject {
     }
 
     private func saveSettings() {
-        if let data = try? JSONEncoder().encode(globalSettings) {
+        do {
+            let data = try JSONEncoder().encode(globalSettings)
             UserDefaults.standard.set(data, forKey: settingsKey)
+        } catch {
+            logError("RateLimitService: failed to encode global settings: \(error)")
         }
-        if let data = try? JSONEncoder().encode(accountSettings) {
+        do {
+            let data = try JSONEncoder().encode(accountSettings)
             UserDefaults.standard.set(data, forKey: accountSettingsKey)
+        } catch {
+            logError("RateLimitService: failed to encode account settings: \(error)")
         }
     }
 

@@ -27,7 +27,7 @@ extension BackupManager {
     // MARK: - Account Management
 
     @discardableResult
-    func addAccount(_ account: EmailAccount, password: String?) -> Bool {
+    func addAccount(_ account: EmailAccount, password: String?) async throws -> Bool {
         // Check for duplicate email address
         if accounts.contains(where: { $0.email.lowercased() == account.email.lowercased() }) {
             logError("Account with email \(account.email) already exists")
@@ -35,27 +35,17 @@ extension BackupManager {
         }
 
         var mutableAccount = account
-        accounts.append(mutableAccount)
-        saveAccounts()
 
-        // Save password to Keychain (only for non-OAuth accounts)
-        // Use consumeTemporaryPassword to clear the password from the account struct
+        // Save password to Keychain BEFORE publishing the account so that
+        // any code running immediately after addAccount() can read credentials.
         let passwordToSave = password ?? mutableAccount.consumeTemporaryPassword()
         if let passwordToSave = passwordToSave {
-            Task {
-                do {
-                    try await KeychainService.shared.savePassword(passwordToSave, for: account.id)
-                    logInfo("Password saved to Keychain for \(account.email)")
-                } catch {
-                    logError("Failed to save password to Keychain for \(account.email): \(error.localizedDescription)")
-                }
-            }
+            try await KeychainService.shared.savePassword(passwordToSave, for: account.id)
+            logInfo("Password saved to Keychain for \(account.email)")
         }
 
-        // Clear the temporary password from the stored account
-        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
-            accounts[index].clearTemporaryPassword()
-        }
+        accounts.append(mutableAccount)
+        saveAccounts()
 
         return true
     }

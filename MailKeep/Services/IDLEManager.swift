@@ -53,6 +53,7 @@ actor IDLEManager {
     /// Outer loop: reconnects on error (30s delay) or keepalive timeout (immediate).
     /// Inner loop: sends IDLE, processes notifications, repeats.
     private func runMonitor(for account: EmailAccount) async {
+        var consecutiveFailures = 0
         while !Task.isCancelled {
             let service = IMAPService(account: account)
             let rateLimitSettings = await RateLimitService.shared.getSettings(for: account.id)
@@ -63,6 +64,9 @@ actor IDLEManager {
                 try await service.login()
                 _ = try await service.selectFolder("INBOX")
                 var lastUID = try await service.fetchLastUID()
+
+                // Successful connect — reset failure counter
+                consecutiveFailures = 0
 
                 logInfo("IDLE: monitoring INBOX for \(account.email) (lastUID=\(lastUID))")
 
@@ -96,9 +100,15 @@ actor IDLEManager {
 
             } catch {
                 guard !Task.isCancelled else { break }
-                logWarning("IDLE: error for \(account.email): \(error.localizedDescription). Retrying in 30s.")
+                consecutiveFailures += 1
+                if consecutiveFailures >= 10 {
+                    logError("IDLE: \(account.email) failed \(consecutiveFailures) consecutive times, stopping monitor")
+                    break
+                }
+                let delay = min(30.0 * pow(2.0, Double(consecutiveFailures - 1)), 300.0)
+                logWarning("IDLE: error for \(account.email): \(error.localizedDescription). Retrying in \(Int(delay))s (failure \(consecutiveFailures)/10).")
                 do {
-                    try await Task.sleep(nanoseconds: 30_000_000_000)
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 } catch {
                     break  // Task cancelled during sleep — exit immediately
                 }

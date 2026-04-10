@@ -205,7 +205,9 @@ extension BackupManager {
 
             // Retry with exponential backoff (max 3 attempts)
             var lastError: Error?
+            var streamingTempURL: URL?   // tracked so we can clean up partial files on failure
             for attempt in 1...3 {
+                streamingTempURL = nil
                 do {
                     // Check email size first to decide whether to stream
                     let emailSize = try await imapService.fetchEmailSize(uid: uid)
@@ -235,12 +237,14 @@ extension BackupManager {
                             accountEmail: account.email,
                             folderPath: folder.path
                         )
+                        streamingTempURL = tempURL  // capture so catch can clean it up
 
                         // Stream directly to disk
                         bytesDownloaded = try await imapService.streamEmailToFile(uid: uid, destinationURL: tempURL)
 
                         // Move to final location and update UID cache
                         try await storageService.finalizeStreamedFile(tempURL: tempURL, finalURL: finalURL, uid: uid)
+                        streamingTempURL = nil  // temp has been moved; no longer needs cleanup
 
                         // Check for moved emails (deduplication)
                         let dupResult = await storageService.checkAndHandleDuplicate(
@@ -360,12 +364,26 @@ extension BackupManager {
                     break // Success, exit retry loop
 
                 } catch {
+                    // Remove any partially-written streaming temp file before retrying
+                    if let tempURL = streamingTempURL {
+                        if (try? FileManager.default.removeItem(at: tempURL)) == nil {
+                            logWarning("Could not remove streaming temp file: \(tempURL.lastPathComponent)")
+                        }
+                        streamingTempURL = nil
+                    }
                     lastError = error
                     if attempt < Constants.maxRetryAttempts {
                         // Exponential backoff: 1s, 2s, 4s
                         let delay = UInt64(pow(2.0, Double(attempt - 1))) * Constants.nanosecondsPerSecond
                         try? await Task.sleep(nanoseconds: delay)
                     }
+                }
+            }
+
+            // Remove any residual streaming temp file after all retries are exhausted
+            if let tempURL = streamingTempURL {
+                if (try? FileManager.default.removeItem(at: tempURL)) == nil {
+                    logWarning("Could not remove streaming temp file after retries: \(tempURL.lastPathComponent)")
                 }
             }
 

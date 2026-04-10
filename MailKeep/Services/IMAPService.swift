@@ -242,11 +242,15 @@ actor IMAPService {
                 case .failed(let error):
                     trace("connect() FAILED: \(error)")
                     guard state.tryResume() else { return }
-                    continuation.resume(throwing: IMAPError.connectionFailed(error.localizedDescription))
+                    Task {
+                        continuation.resume(throwing: IMAPError.connectionFailed(error.localizedDescription))
+                    }
                 case .cancelled:
                     trace("connect() CANCELLED")
                     guard state.tryResume() else { return }
-                    continuation.resume(throwing: IMAPError.connectionCancelled)
+                    Task {
+                        continuation.resume(throwing: IMAPError.connectionCancelled)
+                    }
                 default:
                     break
                 }

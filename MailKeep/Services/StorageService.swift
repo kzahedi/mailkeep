@@ -288,14 +288,22 @@ actor StorageService {
         // Check if this hash exists elsewhere
         if let existingURL = findExistingByHash(hash, accountEmail: accountEmail),
            existingURL != newFileURL {
-            // Found duplicate - this email was moved, not new
-            // Delete the newly downloaded copy and move the original
+            // Found duplicate — this email was moved, not new.
+            // Use move-then-delete ordering so a filesystem error never loses both copies:
+            //   1. Move the existing file to a safe temp path (original is preserved if 2/3 fail)
+            //   2. Delete the newly-downloaded copy
+            //   3. Rename temp into the new location
+            //   On any failure, restore the temp back to the original path.
+            let tempPath = existingURL.appendingPathExtension("dedup-tmp")
             do {
-                // Remove the new download
-                try fileManager.removeItem(at: newFileURL)
-
-                // Move original to new location
-                try fileManager.moveItem(at: existingURL, to: newFileURL)
+                try fileManager.moveItem(at: existingURL, to: tempPath)
+                do {
+                    try fileManager.removeItem(at: newFileURL)
+                    try fileManager.moveItem(at: tempPath, to: newFileURL)
+                } catch {
+                    try? fileManager.moveItem(at: tempPath, to: existingURL)
+                    throw error
+                }
 
                 // Update hash index in new location
                 let newFolderURL = newFileURL.deletingLastPathComponent()
@@ -303,7 +311,7 @@ actor StorageService {
 
                 return (true, existingURL)
             } catch {
-                // If move fails, keep the new download
+                // Operation failed — keep the new download as-is
                 let folderURL = newFileURL.deletingLastPathComponent()
                 appendHashToIndex(hash, filename: newFileURL.lastPathComponent, folderURL: folderURL)
                 return (false, nil)

@@ -275,24 +275,18 @@ struct AddAccountView: View {
             do {
                 let account = try await createAccount()
 
+                let added: Bool
                 if accountType == .gmailOAuth, let tokens = oauthTokens {
                     // Save OAuth tokens
                     try await account.saveOAuthTokens(tokens)
-                    await MainActor.run {
-                        if backupManager.addAccount(account, password: nil) {
-                            dismiss()
-                        } else {
-                            testResult = .failure("An account with this email already exists")
-                        }
-                    }
+                    added = try await backupManager.addAccount(account, password: nil)
                 } else {
-                    await MainActor.run {
-                        if backupManager.addAccount(account, password: password) {
-                            dismiss()
-                        } else {
-                            testResult = .failure("An account with this email already exists")
-                        }
-                    }
+                    added = try await backupManager.addAccount(account, password: password)
+                }
+                if added {
+                    dismiss()
+                } else {
+                    testResult = .failure("An account with this email already exists")
                 }
             } catch {
                 await MainActor.run {
