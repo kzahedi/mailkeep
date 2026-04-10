@@ -108,6 +108,55 @@ actor KeychainService {
         guard !hasPassword(for: accountId) else { return }
         try savePassword(password, for: accountId)
     }
+
+    // MARK: - Account List (synchronous, for use during BackupManager init)
+
+    private let accountListService = "com.kzahedi.MailKeep.accounts"
+    private let accountListAccount = "account-list"
+
+    /// Save the full account list as a JSON blob. Synchronous — safe to call from @MainActor init.
+    nonisolated func saveAccountList(_ data: Data) throws {
+        try deleteAccountList()
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: accountListService,
+            kSecAttrAccount as String: accountListAccount,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw KeychainError.saveFailed(status)
+        }
+    }
+
+    /// Load the account list JSON blob. Returns nil if not present.
+    nonisolated func loadAccountList() -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: accountListService,
+            kSecAttrAccount as String: accountListAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return data
+    }
+
+    /// Delete the account list entry. Silent if not present.
+    nonisolated func deleteAccountList() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: accountListService,
+            kSecAttrAccount as String: accountListAccount
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainError.deleteFailed(status)
+        }
+    }
 }
 
 // MARK: - Errors

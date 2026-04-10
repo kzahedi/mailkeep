@@ -88,29 +88,27 @@ extension BackupManager {
     }
 
     func loadAccounts() {
-        if let data = UserDefaults.standard.data(forKey: accountsKey),
-           let decoded = try? JSONDecoder().decode([EmailAccount].self, from: data) {
-            accounts = decoded
-        }
+        let keychain = KeychainService.shared
 
-        // Uncomment to add a test account for development
-        // #if DEBUG
-        // if accounts.isEmpty {
-        //     let testAccount = EmailAccount.gmail(
-        //         email: "your-email@gmail.com",
-        //         appPassword: "your-app-password"
-        //     )
-        //     accounts.append(testAccount)
-        // }
-        // #endif
+        // Prefer Keychain; fall back to UserDefaults for one-time migration
+        if let data = keychain.loadAccountList() {
+            accounts = (try? JSONDecoder().decode([EmailAccount].self, from: data)) ?? []
+        } else if let data = UserDefaults.standard.data(forKey: accountsKey),
+                  let decoded = try? JSONDecoder().decode([EmailAccount].self, from: data) {
+            // Migrate to Keychain and remove from UserDefaults
+            accounts = decoded
+            try? keychain.saveAccountList(data)
+            UserDefaults.standard.removeObject(forKey: accountsKey)
+            logInfo("Migrated account list from UserDefaults to Keychain")
+        }
     }
 
     func saveAccounts() {
         do {
             let encoded = try JSONEncoder().encode(accounts)
-            UserDefaults.standard.set(encoded, forKey: accountsKey)
+            try KeychainService.shared.saveAccountList(encoded)
         } catch {
-            logError("saveAccounts encoding failed: \(error)")
+            logError("saveAccounts failed: \(error)")
         }
     }
 }

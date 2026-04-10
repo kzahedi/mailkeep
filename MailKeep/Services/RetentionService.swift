@@ -55,21 +55,17 @@ class RetentionService: ObservableObject {
 
         logInfo("Applying retention policy (\(effectiveSettings.policy.rawValue)) to \(directory.lastPathComponent)")
 
-        var result = RetentionResult(filesDeleted: 0, bytesFreed: 0)
-
-        // Get all .eml files recursively
-        let emlFiles = getEmlFiles(in: directory)
-
-        switch effectiveSettings.policy {
-        case .keepAll:
-            break
-
-        case .byAge:
-            result = await deleteByAge(files: emlFiles, maxAgeDays: effectiveSettings.maxAgeDays)
-
-        case .byCount:
-            result = await deleteByCount(files: emlFiles, maxCount: effectiveSettings.maxCount)
-        }
+        let result = await Task.detached(priority: .utility) {
+            let emlFiles = self.getEmlFiles(in: directory)
+            switch effectiveSettings.policy {
+            case .keepAll:
+                return RetentionResult(filesDeleted: 0, bytesFreed: 0)
+            case .byAge:
+                return self.deleteByAge(files: emlFiles, maxAgeDays: effectiveSettings.maxAgeDays)
+            case .byCount:
+                return self.deleteByCount(files: emlFiles, maxCount: effectiveSettings.maxCount)
+            }
+        }.value
 
         if result.filesDeleted > 0 {
             logInfo("Retention completed: deleted \(result.filesDeleted) files, freed \(ByteCountFormatter.string(fromByteCount: result.bytesFreed, countStyle: .file))")
@@ -80,31 +76,25 @@ class RetentionService: ObservableObject {
 
     /// Apply retention to all account directories
     func applyRetentionToAll(backupLocation: URL) async -> RetentionResult {
-        var totalResult = RetentionResult(filesDeleted: 0, bytesFreed: 0)
-
-        do {
-            let accountDirs = try fileManager.contentsOfDirectory(
+        let accountDirs = await Task.detached(priority: .utility) {
+            (try? FileManager.default.contentsOfDirectory(
                 at: backupLocation,
                 includingPropertiesForKeys: [.isDirectoryKey]
-            ).filter { url in
-                (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-            }
+            ).filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }) ?? []
+        }.value
 
-            for accountDir in accountDirs {
-                let result = await applyRetention(to: accountDir)
-                totalResult.filesDeleted += result.filesDeleted
-                totalResult.bytesFreed += result.bytesFreed
-            }
-        } catch {
-            logError("Failed to enumerate account directories: \(error.localizedDescription)")
+        var totalResult = RetentionResult(filesDeleted: 0, bytesFreed: 0)
+        for accountDir in accountDirs {
+            let result = await applyRetention(to: accountDir)
+            totalResult.filesDeleted += result.filesDeleted
+            totalResult.bytesFreed += result.bytesFreed
         }
-
         return totalResult
     }
 
     // MARK: - Retention Strategies
 
-    private func deleteByAge(files: [FileInfo], maxAgeDays: Int) async -> RetentionResult {
+    nonisolated private func deleteByAge(files: [FileInfo], maxAgeDays: Int) -> RetentionResult {
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -maxAgeDays, to: Date()) ?? Date()
         var deleted = 0
         var bytesFreed: Int64 = 0
@@ -112,7 +102,7 @@ class RetentionService: ObservableObject {
         for file in files {
             if file.modificationDate < cutoffDate {
                 do {
-                    try fileManager.removeItem(at: file.url)
+                    try FileManager.default.removeItem(at: file.url)
                     deleted += 1
                     bytesFreed += file.size
                     logDebug("Deleted old backup: \(file.url.lastPathComponent) (age: \(file.modificationDate))")
@@ -125,22 +115,19 @@ class RetentionService: ObservableObject {
         return RetentionResult(filesDeleted: deleted, bytesFreed: bytesFreed)
     }
 
-    private func deleteByCount(files: [FileInfo], maxCount: Int) async -> RetentionResult {
+    nonisolated private func deleteByCount(files: [FileInfo], maxCount: Int) -> RetentionResult {
         guard files.count > maxCount else {
             return RetentionResult(filesDeleted: 0, bytesFreed: 0)
         }
 
-        // Sort by modification date (newest first)
         let sortedFiles = files.sorted { $0.modificationDate > $1.modificationDate }
-
-        // Delete oldest files beyond the count limit
         let filesToDelete = sortedFiles.dropFirst(maxCount)
         var deleted = 0
         var bytesFreed: Int64 = 0
 
         for file in filesToDelete {
             do {
-                try fileManager.removeItem(at: file.url)
+                try FileManager.default.removeItem(at: file.url)
                 deleted += 1
                 bytesFreed += file.size
                 logDebug("Deleted excess backup: \(file.url.lastPathComponent)")
@@ -154,16 +141,16 @@ class RetentionService: ObservableObject {
 
     // MARK: - File Enumeration
 
-    private struct FileInfo {
+    private struct FileInfo: Sendable {
         let url: URL
         let size: Int64
         let modificationDate: Date
     }
 
-    private func getEmlFiles(in directory: URL) -> [FileInfo] {
+    nonisolated private func getEmlFiles(in directory: URL) -> [FileInfo] {
         var files: [FileInfo] = []
 
-        guard let enumerator = fileManager.enumerator(
+        guard let enumerator = FileManager.default.enumerator(
             at: directory,
             includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey],
             options: [.skipsHiddenFiles]
