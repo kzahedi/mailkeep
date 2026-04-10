@@ -875,20 +875,20 @@ actor IMAPService {
 
     private func parseListLine(_ line: String) -> IMAPFolder? {
         // Match pattern: * LIST (flags) "delimiter" "name"
-        let pattern = #"\* (?:LIST|LSUB) \(([^)]*)\) "(.)" "?([^"]+)"?"#
+        // Delimiter may be NIL (flat-namespace servers) or a quoted single character
+        let pattern = #"\* (?:LIST|LSUB) \(([^)]*)\) (?:NIL|"(.)") "?([^"]+)"?"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []),
               let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) else {
             return nil
         }
 
         guard let flagsRange = Range(match.range(at: 1), in: line),
-              let delimiterRange = Range(match.range(at: 2), in: line),
               let nameRange = Range(match.range(at: 3), in: line) else {
             return nil
         }
 
         let flags = String(line[flagsRange])
-        let delimiter = String(line[delimiterRange])
+        let delimiter = Range(match.range(at: 2), in: line).map { String(line[$0]) } ?? ""
         let rawName = String(line[nameRange])
 
         // Decode IMAP modified UTF-7 encoding (RFC 3501)

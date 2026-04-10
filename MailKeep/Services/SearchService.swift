@@ -156,69 +156,47 @@ actor SearchService {
 
     /// Get list of available accounts for filter UI (runs on background thread)
     func getAvailableAccounts() async -> [String] {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let fileManager = FileManager.default
-
-                guard fileManager.fileExists(atPath: self.backupLocation.path) else {
-                    continuation.resume(returning: [])
-                    return
-                }
-
-                do {
-                    let contents = try fileManager.contentsOfDirectory(at: self.backupLocation, includingPropertiesForKeys: [.isDirectoryKey])
-                    let accounts = contents
-                        .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-                        .map { $0.lastPathComponent }
-                        .sorted()
-                    continuation.resume(returning: accounts)
-                } catch {
-                    continuation.resume(returning: [])
-                }
+        let location = backupLocation
+        return await Task.detached(priority: .userInitiated) {
+            let fileManager = FileManager.default
+            guard fileManager.fileExists(atPath: location.path) else { return [] }
+            do {
+                let contents = try fileManager.contentsOfDirectory(at: location, includingPropertiesForKeys: [.isDirectoryKey])
+                return contents
+                    .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+                    .map { $0.lastPathComponent }
+                    .sorted()
+            } catch {
+                return []
             }
-        }
+        }.value
     }
 
     /// Get list of available folders for a specific account (or all accounts) - runs on background thread
     func getAvailableFolders(forAccount account: String? = nil) async -> [String] {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let fileManager = FileManager.default
-                var folders = Set<String>()
+        let location = backupLocation
+        return await Task.detached(priority: .userInitiated) {
+            let fileManager = FileManager.default
+            var folders = Set<String>()
 
-                guard fileManager.fileExists(atPath: self.backupLocation.path) else {
-                    continuation.resume(returning: [])
-                    return
+            guard fileManager.fileExists(atPath: location.path) else { return [] }
+
+            let searchRoot = account.map { location.appendingPathComponent($0) } ?? location
+
+            guard let enumerator = fileManager.enumerator(
+                at: searchRoot,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+            ) else { return [] }
+
+            while let url = enumerator.nextObject() as? URL {
+                if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                    folders.insert(url.lastPathComponent)
                 }
-
-                let searchRoot: URL
-                if let account = account {
-                    searchRoot = self.backupLocation.appendingPathComponent(account)
-                } else {
-                    searchRoot = self.backupLocation
-                }
-
-                guard let enumerator = fileManager.enumerator(
-                    at: searchRoot,
-                    includingPropertiesForKeys: [.isDirectoryKey],
-                    options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-                ) else {
-                    continuation.resume(returning: [])
-                    return
-                }
-
-                // Only get top-level folders, not all descendants
-                while let url = enumerator.nextObject() as? URL {
-                    if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-                        let folderName = url.lastPathComponent
-                        // Add common folder names without checking for .eml files (faster)
-                        folders.insert(folderName)
-                    }
-                }
-
-                continuation.resume(returning: folders.sorted())
             }
-        }
+
+            return folders.sorted()
+        }.value
     }
 
     /// Reindex all - this is a no-op for file-based search

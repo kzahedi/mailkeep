@@ -22,7 +22,7 @@ actor StorageService {
     // MARK: - UID Cache Management
 
     /// Get the UID cache file URL for a folder
-    private func uidCacheURL(for folderURL: URL) -> URL {
+    nonisolated private func uidCacheURL(for folderURL: URL) -> URL {
         folderURL.appendingPathComponent(uidCacheFilename)
     }
 
@@ -47,7 +47,7 @@ actor StorageService {
     }
 
     /// Read UIDs from cache file (O(1) file read instead of O(n) directory scan)
-    private func readUIDsFromCache(folderURL: URL) -> Set<UInt32>? {
+    nonisolated private func readUIDsFromCache(folderURL: URL) -> Set<UInt32>? {
         let cacheURL = uidCacheURL(for: folderURL)
 
         guard let content = try? String(contentsOf: cacheURL, encoding: .utf8) else {
@@ -99,55 +99,46 @@ actor StorageService {
     /// Returns the number of caches that were repaired
     /// Runs heavy file operations on background queue to avoid blocking
     func validateAndRepairAllCaches() async -> Int {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .utility).async {
-                var repairedCount = 0
+        let baseURL = self.baseURL
+        return await Task.detached(priority: .utility) {
+            let fm = FileManager.default
+            var repairedCount = 0
 
-                guard self.fileManager.fileExists(atPath: self.baseURL.path) else {
-                    continuation.resume(returning: 0)
-                    return
-                }
+            guard fm.fileExists(atPath: baseURL.path) else { return 0 }
 
-                // Find all directories that contain .eml files
-                guard let enumerator = self.fileManager.enumerator(
-                    at: self.baseURL,
-                    includingPropertiesForKeys: [.isDirectoryKey],
-                    options: [.skipsHiddenFiles]
-                ) else {
-                    continuation.resume(returning: 0)
-                    return
-                }
+            guard let enumerator = fm.enumerator(
+                at: baseURL,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else { return 0 }
 
-                var foldersToCheck: [URL] = []
-
-                while let fileURL = enumerator.nextObject() as? URL {
-                    if fileURL.pathExtension == "eml" {
-                        let folderURL = fileURL.deletingLastPathComponent()
-                        if !foldersToCheck.contains(folderURL) {
-                            foldersToCheck.append(folderURL)
-                        }
+            var foldersToCheck: [URL] = []
+            while let fileURL = enumerator.nextObject() as? URL {
+                if fileURL.pathExtension == "eml" {
+                    let folderURL = fileURL.deletingLastPathComponent()
+                    if !foldersToCheck.contains(folderURL) {
+                        foldersToCheck.append(folderURL)
                     }
                 }
-
-                // Check and repair each folder's cache
-                for folderURL in foldersToCheck {
-                    if self.validateAndRepairCacheSync(for: folderURL) {
-                        repairedCount += 1
-                    }
-                }
-
-                continuation.resume(returning: repairedCount)
             }
-        }
+
+            for folderURL in foldersToCheck {
+                if self.validateAndRepairCacheSync(for: folderURL) {
+                    repairedCount += 1
+                }
+            }
+
+            return repairedCount
+        }.value
     }
 
     /// Validate and repair cache for a single folder (sync version for background queue)
     /// Returns true if cache was repaired
-    private func validateAndRepairCacheSync(for folderURL: URL) -> Bool {
+    nonisolated private func validateAndRepairCacheSync(for folderURL: URL) -> Bool {
         let cacheURL = uidCacheURL(for: folderURL)
 
         // Get actual UIDs from .eml files
-        guard let contents = try? fileManager.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil) else {
+        guard let contents = try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil) else {
             return false
         }
 
