@@ -18,6 +18,8 @@ permissions:
 jobs:
   build:
     name: Build and Create DMG
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     runs-on: macos-14
     timeout-minutes: 30
 
