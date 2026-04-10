@@ -29,6 +29,8 @@
 		E100000100000004 /* IMAPServiceIDLETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E100000200000004 /* IMAPServiceIDLETests.swift */; };
 		E100000100000005 /* IDLEManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E100000200000005 /* IDLEManagerTests.swift */; };
 		E100000100000006 /* BackupManagerIDLETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E100000200000006 /* BackupManagerIDLETests.swift */; };
+		E100000100000007 /* BackupHistoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E100000200000007 /* BackupHistoryServiceTests.swift */; };
+		E100000100000008 /* BackupManagerAccountsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E100000200000008 /* BackupManagerAccountsTests.swift */; };
 		B10000010000000000000009 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000009 /* MainWindowView.swift */; };
 		B1000001000000000000000A /* AccountRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000000A /* AccountRowView.swift */; };
 		B10000010000000000000022 /* MissingPasswordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000022 /* MissingPasswordsView.swift */; };
@@ -116,6 +118,8 @@
 		E100000200000004 /* IMAPServiceIDLETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAPServiceIDLETests.swift; sourceTree = "<group>"; };
 		E100000200000005 /* IDLEManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IDLEManagerTests.swift; sourceTree = "<group>"; };
 		E100000200000006 /* BackupManagerIDLETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManagerIDLETests.swift; sourceTree = "<group>"; };
+		E100000200000007 /* BackupHistoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupHistoryServiceTests.swift; sourceTree = "<group>"; };
+		E100000200000008 /* BackupManagerAccountsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManagerAccountsTests.swift; sourceTree = "<group>"; };
 		B10000020000000000000009 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		B1000002000000000000000A /* AccountRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountRowView.swift; sourceTree = "<group>"; };
 		B10000020000000000000022 /* MissingPasswordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissingPasswordsView.swift; sourceTree = "<group>"; };
@@ -365,6 +369,8 @@
 				E100000200000004 /* IMAPServiceIDLETests.swift */,
 				E100000200000005 /* IDLEManagerTests.swift */,
 				E100000200000006 /* BackupManagerIDLETests.swift */,
+				E100000200000007 /* BackupHistoryServiceTests.swift */,
+				E100000200000008 /* BackupManagerAccountsTests.swift */,
 			);
 			path = MailKeepTests;
 			sourceTree = "<group>";
@@ -583,6 +589,8 @@
 				E100000100000004 /* IMAPServiceIDLETests.swift in Sources */,
 				E100000100000005 /* IDLEManagerTests.swift in Sources */,
 				E100000100000006 /* BackupManagerIDLETests.swift in Sources */,
+				E100000100000007 /* BackupHistoryServiceTests.swift in Sources */,
+				E100000100000008 /* BackupManagerAccountsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

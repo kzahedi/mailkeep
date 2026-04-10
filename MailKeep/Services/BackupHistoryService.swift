@@ -10,8 +10,18 @@ class BackupHistoryService: ObservableObject {
     private let maxEntries = 100
     /// Legacy key — used only for one-time migration from UserDefaults to the file store.
     private let legacyHistoryKey = "BackupHistory"
+    /// Override directory for unit tests. `nil` → uses Application Support/MailKeep.
+    private let storageDirectory: URL?
 
     private init() {
+        self.storageDirectory = nil
+        migrateFromUserDefaultsIfNeeded()
+        loadHistory()
+    }
+
+    /// Exposed for unit tests only — pass a temporary directory URL.
+    init(directory: URL) {
+        self.storageDirectory = directory
         migrateFromUserDefaultsIfNeeded()
         loadHistory()
     }
@@ -72,12 +82,18 @@ class BackupHistoryService: ObservableObject {
 
     // MARK: - Persistence
 
-    /// URL for `backup_history.json` in Application Support.
+    /// URL for `backup_history.json`.
+    /// Uses `storageDirectory` when set (tests), otherwise Application Support/MailKeep.
     private func historyFileURL() -> URL? {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory, in: .userDomainMask
-        ).first else { return nil }
-        let dir = appSupport.appendingPathComponent("MailKeep", isDirectory: true)
+        let dir: URL
+        if let override = storageDirectory {
+            dir = override
+        } else {
+            guard let appSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first else { return nil }
+            dir = appSupport.appendingPathComponent("MailKeep", isDirectory: true)
+        }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("backup_history.json")
     }

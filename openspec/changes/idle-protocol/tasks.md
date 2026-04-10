@@ -21,5 +21,5 @@
 
 - [x] 4.1 Build the project with no Swift compiler errors or warnings introduced by these changes
 - [x] 4.2 Run any existing IDLE-related unit tests; confirm all pass
-- [ ] 4.3 Manually test keepalive timeout path: after 25 min (or with a reduced timeout in debug) confirm the server receives `DONE` before the connection closes (check server logs or a packet capture)
-- [ ] 4.4 Manually test error retry path: simulate a connection drop and confirm the reconnected service is rate-limited (no rapid-fire burst of `connect`/`login` visible in logs)
+- [x] 4.3 Manually test keepalive timeout path: after 25 min (or with a reduced timeout in debug) confirm the server receives `DONE` before the connection closes (check server logs or a packet capture)
+- [x] 4.4 Manually test error retry path: simulate a connection drop and confirm the reconnected service is rate-limited (no rapid-fire burst of `connect`/`login` visible in logs)

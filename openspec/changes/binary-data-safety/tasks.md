@@ -22,4 +22,4 @@
 ## 4. Regression check
 
 - [x] 4.1 Run the full test suite (`xcodebuild test`) and confirm all existing IMAP and IDLE tests pass
-- [ ] 4.2 Manually test backup of an account that contains emails with binary attachments; confirm downloaded `.eml` files open correctly in Mail.app
+- [x] 4.2 Manually test backup of an account that contains emails with binary attachments; confirm downloaded `.eml` files open correctly in Mail.app

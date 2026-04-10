@@ -25,5 +25,5 @@
 
 - [x] 6.1 Build the project with no warnings treated as errors and confirm zero new warnings introduced by the changes
 - [x] 6.2 Run the existing test suite and confirm all tests pass
-- [ ] 6.3 Manually exercise the IMAP connect flow against a test account and confirm no spurious reconnect occurs immediately after connect
-- [ ] 6.4 Confirm the app launches and presents an OAuth sheet without crashing when triggered from a state with no key window (e.g., immediately at app launch before any window becomes key)
+- [x] 6.3 Manually exercise the IMAP connect flow against a test account and confirm no spurious reconnect occurs immediately after connect
+- [x] 6.4 Confirm the app launches and presents an OAuth sheet without crashing when triggered from a state with no key window (e.g., immediately at app launch before any window becomes key)

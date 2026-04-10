@@ -34,7 +34,7 @@
 ## 6. Fix saveAccounts Silent Failure (M1)
 
 - [x] 6.1 Replace `if let encoded = try? JSONEncoder().encode(accounts)` in `BackupManager+Accounts.saveAccounts()` with a `do { let encoded = try JSONEncoder().encode(accounts); UserDefaults.standard.set(encoded, forKey: accountsKey) } catch { logError("saveAccounts encoding failed: \(error)") }`
-- [ ] 6.2 Write a unit test that injects a type that fails `Encodable` and asserts `logError` is called and `UserDefaults` is not written
+- [x] 6.2 Write a unit test that injects a type that fails `Encodable` and asserts `logError` is called and `UserDefaults` is not written
 
 ## 7. Migrate BackupHistoryService to Encrypted File Store
 
@@ -43,9 +43,9 @@
 - [x] 7.3 Replace `loadHistory()` body: read from the file URL and decode; call `logError` on any `catch`
 - [x] 7.4 Implement one-time migration in `init()`: if the encrypted file does not yet exist, check `UserDefaults` for the `BackupHistory` key; if present, decode entries, write to the encrypted file, and remove the `UserDefaults` key
 - [x] 7.5 Ensure `loadHistory()` does not crash and logs an error when the file is missing or corrupt
-- [ ] 7.6 Write a unit test confirming a round-trip: save entries → reload from file → entries match
-- [ ] 7.7 Write a unit test confirming the one-time migration: seed `UserDefaults`, call `init()`, assert entries loaded correctly and `UserDefaults` key is cleared
-- [ ] 7.8 Write a unit test confirming that a missing/corrupt file logs an error and returns empty entries
+- [x] 7.6 Write a unit test confirming a round-trip: save entries → reload from file → entries match
+- [x] 7.7 Write a unit test confirming the one-time migration: seed `UserDefaults`, call `init()`, assert entries loaded correctly and `UserDefaults` key is cleared
+- [x] 7.8 Write a unit test confirming that a missing/corrupt file logs an error and returns empty entries
 
 ## 8. Final Verification
 

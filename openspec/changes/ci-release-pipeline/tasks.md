@@ -39,5 +39,5 @@
 ## 4. Validate
 
 - [x] 4.1 Run `yamllint` or GitHub's workflow syntax checker on both files (or open in the GitHub Actions editor) to confirm valid YAML
-- [ ] 4.2 Push changes to a branch and verify the CI run completes with a green/red badge correctly reflecting test results
-- [ ] 4.3 Trigger `workflow_dispatch` with version `0.3.0` to validate the release pipeline end-to-end; confirm `.dmg` appears as a release asset on GitHub
+- [x] 4.2 Push changes to a branch and verify the CI run completes with a green/red badge correctly reflecting test results
+- [x] 4.3 Trigger `workflow_dispatch` with version `0.3.0` to validate the release pipeline end-to-end; confirm `.dmg` appears as a release asset on GitHub
