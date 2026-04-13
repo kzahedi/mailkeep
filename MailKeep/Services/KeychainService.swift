@@ -23,20 +23,32 @@ actor KeychainService {
             throw KeychainError.encodingFailed
         }
 
-        // Delete any existing password first
-        try? deletePassword(for: accountId, service: service)
-
-        let query: [String: Any] = [
+        let lookupQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: passwordData,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            kSecAttrAccount as String: account
         ]
 
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw KeychainError.saveFailed(status)
+        let checkStatus = SecItemCopyMatching(lookupQuery as CFDictionary, nil)
+        if checkStatus == errSecSuccess {
+            // Update in place — no delete/add window where data could be lost
+            let updateAttributes: [String: Any] = [kSecValueData as String: passwordData]
+            let updateStatus = SecItemUpdate(lookupQuery as CFDictionary, updateAttributes as CFDictionary)
+            guard updateStatus == errSecSuccess else {
+                throw KeychainError.saveFailed(updateStatus)
+            }
+        } else {
+            let addQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: serviceName,
+                kSecAttrAccount as String: account,
+                kSecValueData as String: passwordData,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            ]
+            let status = SecItemAdd(addQuery as CFDictionary, nil)
+            guard status == errSecSuccess else {
+                throw KeychainError.saveFailed(status)
+            }
         }
     }
 
@@ -115,18 +127,37 @@ actor KeychainService {
     private let accountListAccount = "account-list"
 
     /// Save the full account list as a JSON blob. Synchronous — safe to call from @MainActor init.
+    /// Uses upsert (update if exists, add if not) to avoid data loss if the add step fails.
     nonisolated func saveAccountList(_ data: Data) throws {
-        try deleteAccountList()
-        let query: [String: Any] = [
+        let lookupQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: accountListService,
-            kSecAttrAccount as String: accountListAccount,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            kSecAttrAccount as String: accountListAccount
         ]
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw KeychainError.saveFailed(status)
+
+        let checkStatus = SecItemCopyMatching(lookupQuery as CFDictionary, nil)
+        if checkStatus == errSecSuccess {
+            // Item exists — update in place (no delete, so no window of data loss)
+            let updateAttributes: [String: Any] = [
+                kSecValueData as String: data
+            ]
+            let updateStatus = SecItemUpdate(lookupQuery as CFDictionary, updateAttributes as CFDictionary)
+            guard updateStatus == errSecSuccess else {
+                throw KeychainError.saveFailed(updateStatus)
+            }
+        } else {
+            // Item does not exist — add it
+            let addQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: accountListService,
+                kSecAttrAccount as String: accountListAccount,
+                kSecValueData as String: data,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            ]
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            guard addStatus == errSecSuccess else {
+                throw KeychainError.saveFailed(addStatus)
+            }
         }
     }
 
