@@ -3,20 +3,38 @@ import XCTest
 
 /// Tests for BackupManager account persistence (saveAccounts / loadAccounts).
 ///
-/// Accounts are now stored in the Keychain (not UserDefaults). Each test cleans up
-/// the Keychain entry before and after to avoid cross-test pollution.
+/// Tests save/restore the real Keychain account list so test runs never destroy
+/// actual user data. All reads/writes during tests target isolated keys.
 @MainActor
 final class BackupManagerAccountsTests: XCTestCase {
 
+    private let accountsKey = "EmailAccounts"
+
+    // Snapshots of real data, restored in tearDown
+    private var savedKeychainData: Data?
+    private var savedUserDefaultsData: Data?
+
     override func setUp() {
         super.setUp()
+        // Snapshot real data before touching anything
+        savedKeychainData = KeychainService.shared.loadAccountList()
+        savedUserDefaultsData = UserDefaults.standard.data(forKey: accountsKey)
+        // Clear for test isolation
         try? KeychainService.shared.deleteAccountList()
-        UserDefaults.standard.removeObject(forKey: "EmailAccounts")
+        UserDefaults.standard.removeObject(forKey: accountsKey)
     }
 
     override func tearDown() {
+        // Always restore real data regardless of test outcome
         try? KeychainService.shared.deleteAccountList()
-        UserDefaults.standard.removeObject(forKey: "EmailAccounts")
+        if let data = savedKeychainData {
+            try? KeychainService.shared.saveAccountList(data)
+        }
+        if let data = savedUserDefaultsData {
+            UserDefaults.standard.set(data, forKey: accountsKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: accountsKey)
+        }
         super.tearDown()
     }
 
@@ -58,15 +76,14 @@ final class BackupManagerAccountsTests: XCTestCase {
         // Seed UserDefaults with legacy data
         let account = makeAccount(email: "legacy@example.com")
         let data = try! JSONEncoder().encode([account])
-        UserDefaults.standard.set(data, forKey: "EmailAccounts")
+        UserDefaults.standard.set(data, forKey: accountsKey)
 
-        // loadAccounts should migrate to Keychain and remove UserDefaults entry
         let manager = BackupManager()
         manager.loadAccounts()
 
         XCTAssertEqual(manager.accounts.count, 1)
         XCTAssertEqual(manager.accounts.first?.email, "legacy@example.com")
-        XCTAssertNil(UserDefaults.standard.data(forKey: "EmailAccounts"), "UserDefaults entry must be removed after migration")
+        XCTAssertNil(UserDefaults.standard.data(forKey: accountsKey), "UserDefaults entry must be removed after migration")
         XCTAssertNotNil(KeychainService.shared.loadAccountList(), "Keychain must contain the migrated data")
     }
 
