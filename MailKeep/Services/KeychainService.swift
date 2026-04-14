@@ -126,12 +126,19 @@ actor KeychainService {
     private let accountListService = "com.kzahedi.MailKeep.accounts"
     private let accountListAccount = "account-list"
 
+    /// Override the Keychain service name used for the account list.
+    /// Set this in tests to an isolated namespace so test runs never touch
+    /// the production "com.kzahedi.MailKeep.accounts" entry.
+    /// Must be reset to nil in tearDown to avoid leaking into other tests.
+    nonisolated(unsafe) static var testServiceOverride: String? = nil
+
     /// Save the full account list as a JSON blob. Synchronous — safe to call from @MainActor init.
     /// Uses upsert (update if exists, add if not) to avoid data loss if the add step fails.
     nonisolated func saveAccountList(_ data: Data) throws {
+        let serviceName = Self.testServiceOverride ?? accountListService
         let lookupQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: accountListService,
+            kSecAttrService as String: serviceName,
             kSecAttrAccount as String: accountListAccount
         ]
 
@@ -149,7 +156,7 @@ actor KeychainService {
             // Item does not exist — add it
             let addQuery: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: accountListService,
+                kSecAttrService as String: serviceName,
                 kSecAttrAccount as String: accountListAccount,
                 kSecValueData as String: data,
                 kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
@@ -163,9 +170,10 @@ actor KeychainService {
 
     /// Load the account list JSON blob. Returns nil if not present.
     nonisolated func loadAccountList() -> Data? {
+        let serviceName = Self.testServiceOverride ?? accountListService
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: accountListService,
+            kSecAttrService as String: serviceName,
             kSecAttrAccount as String: accountListAccount,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -178,9 +186,10 @@ actor KeychainService {
 
     /// Delete the account list entry. Silent if not present.
     nonisolated func deleteAccountList() throws {
+        let serviceName = Self.testServiceOverride ?? accountListService
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: accountListService,
+            kSecAttrService as String: serviceName,
             kSecAttrAccount as String: accountListAccount
         ]
         let status = SecItemDelete(query as CFDictionary)

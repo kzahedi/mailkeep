@@ -3,38 +3,34 @@ import XCTest
 
 /// Tests for BackupManager account persistence (saveAccounts / loadAccounts).
 ///
-/// Tests save/restore the real Keychain account list so test runs never destroy
-/// actual user data. All reads/writes during tests target isolated keys.
+/// All Keychain operations use an isolated service name
+/// ("com.kzahedi.MailKeep.accounts.uitesting") that is completely separate
+/// from the production "com.kzahedi.MailKeep.accounts" entry. Tests never
+/// read, write, or delete production data regardless of code-signing context.
 @MainActor
 final class BackupManagerAccountsTests: XCTestCase {
 
     private let accountsKey = "EmailAccounts"
 
-    // Snapshots of real data, restored in tearDown
-    private var savedKeychainData: Data?
-    private var savedUserDefaultsData: Data?
-
     override func setUp() {
         super.setUp()
-        // Snapshot real data before touching anything
-        savedKeychainData = KeychainService.shared.loadAccountList()
-        savedUserDefaultsData = UserDefaults.standard.data(forKey: accountsKey)
-        // Clear for test isolation
+        // Route all Keychain account-list operations to the test namespace.
+        // Must be set BEFORE any Keychain call so no production data is touched.
+        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.uitesting"
+
+        // Clear the isolated namespace so each test starts from a clean slate.
         try? KeychainService.shared.deleteAccountList()
+
+        // Clear any UserDefaults test residue (never touches production because
+        // "EmailAccounts" key holds test data, not the app's Keychain-migrated state).
         UserDefaults.standard.removeObject(forKey: accountsKey)
     }
 
     override func tearDown() {
-        // Always restore real data regardless of test outcome
+        // Remove the test entry, then restore routing to production.
         try? KeychainService.shared.deleteAccountList()
-        if let data = savedKeychainData {
-            try? KeychainService.shared.saveAccountList(data)
-        }
-        if let data = savedUserDefaultsData {
-            UserDefaults.standard.set(data, forKey: accountsKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: accountsKey)
-        }
+        KeychainService.testServiceOverride = nil
+        UserDefaults.standard.removeObject(forKey: accountsKey)
         super.tearDown()
     }
 
