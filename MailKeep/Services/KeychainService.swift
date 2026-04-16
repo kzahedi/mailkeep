@@ -132,19 +132,35 @@ actor KeychainService {
     /// Must be reset to nil in tearDown to avoid leaking into other tests.
     nonisolated(unsafe) static var testServiceOverride: String? = nil
 
-    /// Load the account list JSON blob from the legacy Keychain.
-    /// Used only for one-time migration to file storage. Returns nil if not present.
+    /// Load the account list JSON blob for one-time migration to file storage.
+    /// Checks the data protection keychain first (where recent builds saved it),
+    /// then falls back to the legacy keychain (where older builds saved it).
     nonisolated func loadAccountList() -> Data? {
         let serviceName = Self.testServiceOverride ?? accountListService
-        let query: [String: Any] = [
+
+        // Primary: data protection keychain (where e656b1b and later saved it)
+        let dpQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: accountListAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseDataProtectionKeychain as String: true
+        ]
+        var result: AnyObject?
+        var status = SecItemCopyMatching(dpQuery as CFDictionary, &result)
+        if status == errSecSuccess, let data = result as? Data { return data }
+
+        // Fallback: legacy keychain (where pre-c27961c builds saved it)
+        let legacyQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
             kSecAttrAccount as String: accountListAccount,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        result = nil
+        status = SecItemCopyMatching(legacyQuery as CFDictionary, &result)
         guard status == errSecSuccess, let data = result as? Data else { return nil }
         return data
     }
