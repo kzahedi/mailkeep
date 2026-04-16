@@ -2,6 +2,21 @@ import Foundation
 
 extension BackupManager {
 
+    // MARK: - Account List Storage
+
+    /// Override the accounts file URL in tests to avoid touching production data.
+    /// Set to a temp-directory path in setUp; reset to nil in tearDown.
+    nonisolated(unsafe) static var testAccountsFileOverride: URL? = nil
+
+    /// URL of the JSON file that stores the account list.
+    /// ~/Library/Application Support/MailKeep/accounts.json
+    /// Plain file storage: no ACL, no Keychain dialogs, safe at Login Item startup.
+    private var accountsFileURL: URL {
+        if let override = Self.testAccountsFileOverride { return override }
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return appSupport.appendingPathComponent("MailKeep/accounts.json")
+    }
+
     // MARK: - Password Management
 
     /// Check all accounts for missing passwords
@@ -88,25 +103,51 @@ extension BackupManager {
     }
 
     func loadAccounts() {
-        let keychain = KeychainService.shared
+        let fileURL = accountsFileURL
 
-        // Prefer Keychain; fall back to UserDefaults for one-time migration
-        if let data = keychain.loadAccountList() {
-            accounts = (try? JSONDecoder().decode([EmailAccount].self, from: data)) ?? []
-        } else if let data = UserDefaults.standard.data(forKey: accountsKey),
-                  let decoded = try? JSONDecoder().decode([EmailAccount].self, from: data) {
-            // Migrate to Keychain and remove from UserDefaults
-            accounts = decoded
-            try? keychain.saveAccountList(data)
-            UserDefaults.standard.removeObject(forKey: accountsKey)
-            logInfo("Migrated account list from UserDefaults to Keychain")
+        // Primary: JSON file (no Keychain ACL, no dialogs, safe at Login Item startup)
+        if let data = try? Data(contentsOf: fileURL) {
+            if let decoded = try? JSONDecoder().decode([EmailAccount].self, from: data) {
+                accounts = decoded
+                logInfo("Loaded \(decoded.count) account(s) from file storage")
+                return
+            } else {
+                logError("loadAccounts: JSON decode failed — accounts file may be corrupt")
+            }
         }
+
+        // One-time migration from Keychain (existing installs before file-storage switch)
+        let keychain = KeychainService.shared
+        if let data = keychain.loadAccountList(),
+           let decoded = try? JSONDecoder().decode([EmailAccount].self, from: data) {
+            accounts = decoded
+            saveAccounts()  // persist to file for future launches
+            logInfo("Migrated \(decoded.count) account(s) from Keychain to file storage")
+            return
+        }
+
+        // One-time migration from UserDefaults (pre-Keychain legacy installs)
+        if let data = UserDefaults.standard.data(forKey: accountsKey),
+           let decoded = try? JSONDecoder().decode([EmailAccount].self, from: data) {
+            accounts = decoded
+            saveAccounts()  // persist to file for future launches
+            UserDefaults.standard.removeObject(forKey: accountsKey)
+            logInfo("Migrated \(decoded.count) account(s) from UserDefaults to file storage")
+            return
+        }
+
+        logInfo("loadAccounts: no accounts found (new install or first run)")
     }
 
     func saveAccounts() {
         do {
             let encoded = try JSONEncoder().encode(accounts)
-            try KeychainService.shared.saveAccountList(encoded)
+            let fileURL = accountsFileURL
+            try FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try encoded.write(to: fileURL, options: .atomic)
         } catch {
             logError("saveAccounts failed: \(error)")
         }

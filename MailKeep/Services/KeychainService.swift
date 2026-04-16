@@ -121,7 +121,7 @@ actor KeychainService {
         try savePassword(password, for: accountId)
     }
 
-    // MARK: - Account List (synchronous, for use during BackupManager init)
+    // MARK: - Account List (legacy Keychain — used only for one-time migration to file storage)
 
     private let accountListService = "com.kzahedi.MailKeep.accounts"
     private let accountListAccount = "account-list"
@@ -132,43 +132,8 @@ actor KeychainService {
     /// Must be reset to nil in tearDown to avoid leaking into other tests.
     nonisolated(unsafe) static var testServiceOverride: String? = nil
 
-    /// Save the full account list as a JSON blob. Synchronous — safe to call from @MainActor init.
-    /// Uses upsert (update if exists, add if not) to avoid data loss if the add step fails.
-    nonisolated func saveAccountList(_ data: Data) throws {
-        let serviceName = Self.testServiceOverride ?? accountListService
-        let lookupQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: accountListAccount
-        ]
-
-        let checkStatus = SecItemCopyMatching(lookupQuery as CFDictionary, nil)
-        if checkStatus == errSecSuccess {
-            // Item exists — update in place (no delete, so no window of data loss)
-            let updateAttributes: [String: Any] = [
-                kSecValueData as String: data
-            ]
-            let updateStatus = SecItemUpdate(lookupQuery as CFDictionary, updateAttributes as CFDictionary)
-            guard updateStatus == errSecSuccess else {
-                throw KeychainError.saveFailed(updateStatus)
-            }
-        } else {
-            // Item does not exist — add it
-            let addQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: serviceName,
-                kSecAttrAccount as String: accountListAccount,
-                kSecValueData as String: data,
-                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-            ]
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
-            guard addStatus == errSecSuccess else {
-                throw KeychainError.saveFailed(addStatus)
-            }
-        }
-    }
-
-    /// Load the account list JSON blob. Returns nil if not present.
+    /// Load the account list JSON blob from the legacy Keychain.
+    /// Used only for one-time migration to file storage. Returns nil if not present.
     nonisolated func loadAccountList() -> Data? {
         let serviceName = Self.testServiceOverride ?? accountListService
         let query: [String: Any] = [
@@ -182,6 +147,38 @@ actor KeychainService {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess, let data = result as? Data else { return nil }
         return data
+    }
+
+    /// Save the account list JSON blob to the legacy Keychain.
+    /// Retained for test compatibility; production code uses file storage instead.
+    nonisolated func saveAccountList(_ data: Data) throws {
+        let serviceName = Self.testServiceOverride ?? accountListService
+        let lookupQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: accountListAccount
+        ]
+
+        let checkStatus = SecItemCopyMatching(lookupQuery as CFDictionary, nil)
+        if checkStatus == errSecSuccess {
+            let updateAttributes: [String: Any] = [kSecValueData as String: data]
+            let updateStatus = SecItemUpdate(lookupQuery as CFDictionary, updateAttributes as CFDictionary)
+            guard updateStatus == errSecSuccess else {
+                throw KeychainError.saveFailed(updateStatus)
+            }
+        } else {
+            let addQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: serviceName,
+                kSecAttrAccount as String: accountListAccount,
+                kSecValueData as String: data,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            ]
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            guard addStatus == errSecSuccess else {
+                throw KeychainError.saveFailed(addStatus)
+            }
+        }
     }
 
     /// Delete the account list entry. Silent if not present.

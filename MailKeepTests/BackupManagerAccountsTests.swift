@@ -3,44 +3,56 @@ import XCTest
 
 /// Tests for BackupManager account persistence (saveAccounts / loadAccounts).
 ///
-/// All Keychain operations use an isolated service name
-/// ("com.kzahedi.MailKeep.accounts.uitesting") that is completely separate
-/// from the production "com.kzahedi.MailKeep.accounts" entry. Tests never
-/// read, write, or delete production data regardless of code-signing context.
+/// Accounts are stored as a JSON file in Application Support.
+/// Tests redirect both the accounts file (via testAccountsFileOverride) and the
+/// Keychain account-list (via testServiceOverride) to isolated namespaces so no
+/// production data is read, written, or deleted during test runs.
 @MainActor
 final class BackupManagerAccountsTests: XCTestCase {
 
     private let accountsKey = "EmailAccounts"
+    private var tempDir: URL!
 
     override func setUp() {
         super.setUp()
-        // Route all Keychain account-list operations to the test namespace.
-        // Must be set BEFORE any Keychain call so no production data is touched.
-        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.uitesting"
 
-        // Clear the isolated namespace so each test starts from a clean slate.
+        // Isolated temp directory for the accounts file
+        tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MailKeepTests-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        BackupManager.testAccountsFileOverride = tempDir.appendingPathComponent("accounts.json")
+
+        // Isolated Keychain namespace for migration tests
+        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.uitesting"
         try? KeychainService.shared.deleteAccountList()
 
-        // Clear any UserDefaults test residue (never touches production because
-        // "EmailAccounts" key holds test data, not the app's Keychain-migrated state).
+        // Clear any UserDefaults residue
         UserDefaults.standard.removeObject(forKey: accountsKey)
     }
 
     override func tearDown() {
-        // Remove the test entry, then restore routing to production.
+        // Remove temp dir (accounts file)
+        if let dir = tempDir {
+            try? FileManager.default.removeItem(at: dir)
+        }
+        BackupManager.testAccountsFileOverride = nil
+
+        // Remove isolated Keychain entry and restore routing to production
         try? KeychainService.shared.deleteAccountList()
         KeychainService.testServiceOverride = nil
+
         UserDefaults.standard.removeObject(forKey: accountsKey)
         super.tearDown()
     }
 
-    func testSaveAccountsWritesToKeychain() {
+    func testSaveAccountsWritesToFile() {
         let manager = BackupManager()
         manager.accounts = [makeAccount(email: "save@example.com")]
         manager.saveAccounts()
 
-        let data = KeychainService.shared.loadAccountList()
-        XCTAssertNotNil(data, "saveAccounts must write encoded data to Keychain")
+        let fileURL = BackupManager.testAccountsFileOverride!
+        let data = try? Data(contentsOf: fileURL)
+        XCTAssertNotNil(data, "saveAccounts must write encoded data to the accounts file")
     }
 
     func testSaveAccountsRoundTrip() {
@@ -68,19 +80,48 @@ final class BackupManagerAccountsTests: XCTestCase {
         XCTAssertTrue(reloader.accounts.isEmpty, "Saving empty accounts should persist an empty list")
     }
 
-    func testMigrationFromUserDefaultsToKeychain() {
+    func testMigrationFromUserDefaultsToFile() {
         // Seed UserDefaults with legacy data
         let account = makeAccount(email: "legacy@example.com")
         let data = try! JSONEncoder().encode([account])
         UserDefaults.standard.set(data, forKey: accountsKey)
 
+        // BackupManager.init() calls loadAccounts() which migrates and saves to file
         let manager = BackupManager()
-        manager.loadAccounts()
 
         XCTAssertEqual(manager.accounts.count, 1)
         XCTAssertEqual(manager.accounts.first?.email, "legacy@example.com")
-        XCTAssertNil(UserDefaults.standard.data(forKey: accountsKey), "UserDefaults entry must be removed after migration")
-        XCTAssertNotNil(KeychainService.shared.loadAccountList(), "Keychain must contain the migrated data")
+        XCTAssertNil(UserDefaults.standard.data(forKey: accountsKey),
+                     "UserDefaults entry must be removed after migration")
+
+        // Verify the data is now in the file
+        let fileURL = BackupManager.testAccountsFileOverride!
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path),
+                      "Accounts file must exist after migration from UserDefaults")
+    }
+
+    func testMigrationFromKeychainToFile() {
+        // Seed the Keychain (test namespace) to simulate an existing install
+        // where accounts were saved to Keychain before the file-storage switch
+        let account = makeAccount(email: "keychain@example.com")
+        let data = try! JSONEncoder().encode([account])
+        try? KeychainService.shared.saveAccountList(data)
+
+        // BackupManager.init() calls loadAccounts() which migrates from Keychain to file
+        let manager = BackupManager()
+
+        XCTAssertEqual(manager.accounts.count, 1)
+        XCTAssertEqual(manager.accounts.first?.email, "keychain@example.com")
+
+        // Verify the data is now in the file
+        let fileURL = BackupManager.testAccountsFileOverride!
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path),
+                      "Accounts file must exist after migration from Keychain")
+
+        // A second load must read from the file (not the Keychain again)
+        let reloader = BackupManager()
+        XCTAssertEqual(reloader.accounts.count, 1)
+        XCTAssertEqual(reloader.accounts.first?.email, "keychain@example.com")
     }
 
     // MARK: - Helpers
