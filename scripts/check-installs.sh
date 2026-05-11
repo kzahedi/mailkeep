@@ -16,9 +16,16 @@ CANONICAL="$HOME/Applications/MailKeep.app"
 ACCOUNTS_FILE="$HOME/Library/Application Support/MailKeep/accounts.json"
 LSREG="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Support/lsregister"
 
-red()    { printf '\033[31m%s\033[0m\n' "$*"; }
-green()  { printf '\033[32m%s\033[0m\n' "$*"; }
-yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
+# Colorize only when stdout is a TTY (avoids escape codes in hook/log output).
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  red()    { printf '\033[31m%s\033[0m\n' "$*"; }
+  green()  { printf '\033[32m%s\033[0m\n' "$*"; }
+  yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
+else
+  red()    { printf '%s\n' "$*"; }
+  green()  { printf '%s\n' "$*"; }
+  yellow() { printf '%s\n' "$*"; }
+fi
 
 problems=0
 report_problem() { red "  ✗ $*"; problems=$((problems + 1)); }

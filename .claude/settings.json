@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "out=$(./scripts/check-installs.sh 2>&1); rc=$?; [ $rc -eq 0 ] || /usr/bin/jq -nc --arg out \"$out\" '{hookSpecificOutput:{hookEventName:\"SessionStart\", additionalContext:(\"MailKeep install drift detected — run ./scripts/install.sh to fix.\\n\\n\" + $out)}}'",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
