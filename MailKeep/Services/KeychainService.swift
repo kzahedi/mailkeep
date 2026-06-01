@@ -9,109 +9,141 @@ actor KeychainService {
 
     private init() {}
 
-    // MARK: - Password Management
+    // MARK: - Consolidated Credential Store
+    //
+    // All passwords for all accounts are stored in a SINGLE Keychain item per service
+    // as a JSON dictionary keyed by UUID string. This means macOS only prompts once
+    // (for the store item) regardless of how many accounts are configured.
+    //
+    // Legacy per-UUID items (from installs before this change) are migrated lazily:
+    // the first getPassword() call for each account moves it into the store and
+    // deletes the old item. No user action required.
 
-    /// Save password to Keychain
-    /// - Parameters:
-    ///   - password: The password to store
-    ///   - accountId: The account identifier
-    ///   - service: Optional custom service name (defaults to app service)
-    func savePassword(_ password: String, for accountId: UUID, service: String? = nil) throws {
-        let serviceName = service ?? defaultService
-        let account = accountId.uuidString
-        guard let passwordData = password.data(using: .utf8) else {
-            throw KeychainError.encodingFailed
-        }
+    private let credentialStoreAccount = "__credential_store__"
 
-        let lookupQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: account
-        ]
-
-        let checkStatus = SecItemCopyMatching(lookupQuery as CFDictionary, nil)
-        if checkStatus == errSecSuccess {
-            // Update in place — no delete/add window where data could be lost
-            let updateAttributes: [String: Any] = [kSecValueData as String: passwordData]
-            let updateStatus = SecItemUpdate(lookupQuery as CFDictionary, updateAttributes as CFDictionary)
-            guard updateStatus == errSecSuccess else {
-                throw KeychainError.saveFailed(updateStatus)
-            }
-        } else {
-            let addQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: serviceName,
-                kSecAttrAccount as String: account,
-                kSecValueData as String: passwordData,
-                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-            ]
-            let status = SecItemAdd(addQuery as CFDictionary, nil)
-            guard status == errSecSuccess else {
-                throw KeychainError.saveFailed(status)
-            }
-        }
-    }
-
-    /// Retrieve password from Keychain
-    /// - Parameters:
-    ///   - accountId: The account identifier
-    ///   - service: Optional custom service name (defaults to app service)
-    /// - Returns: The stored password
-    func getPassword(for accountId: UUID, service: String? = nil) throws -> String {
-        let serviceName = service ?? defaultService
-        let account = accountId.uuidString
-
+    private func loadStore(service: String) -> [String: String] {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: credentialStoreAccount,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
-
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let dict = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+        return dict
+    }
 
-        guard status == errSecSuccess,
-              let passwordData = result as? Data,
-              let password = String(data: passwordData, encoding: .utf8) else {
+    private func saveStore(_ store: [String: String], service: String) throws {
+        guard let data = try? JSONEncoder().encode(store) else {
+            throw KeychainError.encodingFailed
+        }
+        let lookupQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: credentialStoreAccount
+        ]
+        if SecItemCopyMatching(lookupQuery as CFDictionary, nil) == errSecSuccess {
+            let status = SecItemUpdate(lookupQuery as CFDictionary,
+                                       [kSecValueData as String: data] as CFDictionary)
+            guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
+        } else {
+            let addQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: credentialStoreAccount,
+                kSecValueData as String: data,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            ]
+            let status = SecItemAdd(addQuery as CFDictionary, nil)
+            guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
+        }
+    }
+
+    // MARK: - Password Management
+
+    /// Save password to Keychain (consolidated store — one macOS prompt covers all accounts)
+    func savePassword(_ password: String, for accountId: UUID, service: String? = nil) throws {
+        let serviceName = service ?? defaultService
+        var store = loadStore(service: serviceName)
+        store[accountId.uuidString] = password
+        try saveStore(store, service: serviceName)
+    }
+
+    /// Retrieve password from Keychain.
+    /// Checks the consolidated store first. If not found, falls back to the legacy
+    /// per-UUID item (pre-consolidation installs) and migrates it into the store.
+    func getPassword(for accountId: UUID, service: String? = nil) throws -> String {
+        let serviceName = service ?? defaultService
+
+        // Fast path: consolidated store
+        let store = loadStore(service: serviceName)
+        if let password = store[accountId.uuidString] {
+            return password
+        }
+
+        // Migration path: legacy per-UUID item
+        let legacyQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: accountId.uuidString,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(legacyQuery as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let password = String(data: data, encoding: .utf8) else {
             throw KeychainError.notFound
         }
+
+        // Move into consolidated store, remove old item
+        var updatedStore = store
+        updatedStore[accountId.uuidString] = password
+        try? saveStore(updatedStore, service: serviceName)
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: accountId.uuidString
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
 
         return password
     }
 
-    /// Delete password from Keychain
-    /// - Parameters:
-    ///   - accountId: The account identifier
-    ///   - service: Optional custom service name (defaults to app service)
+    /// Delete password from Keychain (removes from consolidated store and any legacy item)
     func deletePassword(for accountId: UUID, service: String? = nil) throws {
         let serviceName = service ?? defaultService
-        let account = accountId.uuidString
 
-        let query: [String: Any] = [
+        var store = loadStore(service: serviceName)
+        store.removeValue(forKey: accountId.uuidString)
+        try saveStore(store, service: serviceName)
+
+        // Also clean up any legacy per-UUID item that hasn't been migrated yet
+        let legacyQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: account
+            kSecAttrAccount as String: accountId.uuidString
         ]
-
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.deleteFailed(status)
-        }
+        SecItemDelete(legacyQuery as CFDictionary)
     }
 
-    /// Check if password exists in Keychain
-    /// - Parameters:
-    ///   - accountId: The account identifier
-    ///   - service: Optional custom service name (defaults to app service)
+    /// Check if a password exists (checks consolidated store, then legacy items)
     func hasPassword(for accountId: UUID, service: String? = nil) -> Bool {
-        do {
-            _ = try getPassword(for: accountId, service: service)
-            return true
-        } catch {
-            return false
-        }
+        let serviceName = service ?? defaultService
+        let store = loadStore(service: serviceName)
+        if store[accountId.uuidString] != nil { return true }
+        // Check for unmigrated legacy item without triggering migration
+        let legacyQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: accountId.uuidString
+        ]
+        return SecItemCopyMatching(legacyQuery as CFDictionary, nil) == errSecSuccess
     }
 
     /// Migrate password from plaintext to Keychain
