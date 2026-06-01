@@ -340,7 +340,7 @@ actor IMAPService {
         } catch {
             trace("[DEBUG] Failed to get OAuth access token: \(error.localizedDescription)")
             logError("Failed to get OAuth access token: \(error.localizedDescription)")
-            throw IMAPError.authenticationFailed
+            throw IMAPError.oauthFailed("Token not found or expired — re-authorize in Account Settings (\(error.localizedDescription))")
         }
 
         // Generate XOAUTH2 token
@@ -358,7 +358,7 @@ actor IMAPService {
         guard capResponse.uppercased().contains("AUTH=XOAUTH2") else {
             trace("[DEBUG] Server does not support XOAUTH2!")
             logError("Server does not support XOAUTH2 authentication")
-            throw IMAPError.authenticationFailed
+            throw IMAPError.oauthFailed("Gmail IMAP does not support OAuth — ensure IMAP is enabled in Gmail → Settings → See all settings → Forwarding and POP/IMAP")
         }
 
         // Send AUTHENTICATE XOAUTH2 command
@@ -368,18 +368,42 @@ actor IMAPService {
 
         // Check for success (OK) or failure (NO/BAD)
         if response.contains(" NO ") || response.contains(" BAD ") {
-            // Try to parse error for better debugging
-            if response.contains("Invalid credentials") || response.contains("AUTHENTICATIONFAILED") {
-                logError("OAuth2 authentication failed - token may be invalid or revoked")
-            }
-            throw IMAPError.authenticationFailed
+            let reason = decodeSASLError(from: response)
+            logError("OAuth2 authentication failed: \(reason)")
+            throw IMAPError.oauthFailed(reason)
         }
 
         guard response.contains("OK") else {
-            throw IMAPError.authenticationFailed
+            throw IMAPError.oauthFailed("Unexpected server response — re-authorize in Account Settings")
         }
 
         logInfo("Successfully authenticated with OAuth2")
+    }
+
+    /// Decode Google's base64-encoded SASL error from an AUTHENTICATE response.
+    /// Google encodes a JSON error as a SASL continuation line: `+ <base64-json>`
+    /// Example decoded: {"status":"401","schemes":"Bearer","scope":"https://mail.google.com/"}
+    private func decodeSASLError(from response: String) -> String {
+        let lines = response.components(separatedBy: "\r\n")
+        for line in lines where line.hasPrefix("+ ") {
+            let b64 = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            guard !b64.isEmpty,
+                  let data = Data(base64Encoded: b64),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let status = json["status"] as? String else { continue }
+            switch Int(status) ?? 0 {
+            case 400:
+                return "Invalid OAuth request (status 400) — re-authorize in Account Settings"
+            case 401:
+                return "Token rejected (status 401) — ensure IMAP is enabled in Gmail → Settings → Forwarding and POP/IMAP, then re-authorize in Account Settings"
+            default:
+                return "Google error status \(status) — re-authorize in Account Settings"
+            }
+        }
+        if response.contains("AUTHENTICATIONFAILED") || response.contains("Invalid credentials") {
+            return "Token rejected — ensure IMAP is enabled in Gmail → Settings → Forwarding and POP/IMAP, then re-authorize in Account Settings"
+        }
+        return "Authentication failed — ensure IMAP is enabled in Gmail and re-authorize in Account Settings"
     }
 
     func logout() async throws {
@@ -991,6 +1015,7 @@ enum IMAPError: LocalizedError {
     case connectionFailed(String)
     case connectionCancelled
     case authenticationFailed
+    case oauthFailed(String)
     case sendFailed(String)
     case receiveFailed(String)
     case folderNotFound(String)
@@ -1007,6 +1032,8 @@ enum IMAPError: LocalizedError {
             return "Connection was cancelled"
         case .authenticationFailed:
             return "Authentication failed - check username and password"
+        case .oauthFailed(let reason):
+            return "Google authentication failed: \(reason)"
         case .sendFailed(let reason):
             return "Failed to send command: \(reason)"
         case .receiveFailed(let reason):
