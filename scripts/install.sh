@@ -49,20 +49,27 @@ green "  ✓ built $NEW_APP"
 echo
 
 # --- 3. Sanity-check the new binary contains the file-storage fix ---
+# Write strings to a temp file so grep reads a file rather than a pipe —
+# avoids SIGPIPE/pipefail false negatives from grep -q exiting early.
 blue "[3/7] Verifying new binary contains the fix…"
-if ! /usr/bin/strings "$NEW_APP/Contents/MacOS/MailKeep" | /usr/bin/grep -q 'MailKeep/accounts.json'; then
+strings_file=$(mktemp /tmp/mailkeep-strings.XXXXXX)
+/usr/bin/strings "$NEW_APP/Contents/MacOS/MailKeep" > "$strings_file"
+if ! /usr/bin/grep -q 'MailKeep/accounts.json' "$strings_file"; then
+  rm -f "$strings_file"
   red "New binary is missing the file-storage fix marker — refusing to deploy"
   exit 1
 fi
-if /usr/bin/strings "$NEW_APP/Contents/MacOS/MailKeep" | /usr/bin/grep -q '_TtC10IMAPBackup'; then
+if /usr/bin/grep -q '_TtC10IMAPBackup' "$strings_file"; then
+  rm -f "$strings_file"
   red "New binary still uses pre-rename IMAPBackup module symbols — refusing to deploy"
   exit 1
 fi
+rm -f "$strings_file"
 green "  ✓ has file-storage fix, uses MailKeep module"
 echo
 
 # --- 4. Install to canonical location ---
-blue "[4/7] Installing to $CANONICAL…"
+blue "[4/7] Installing to ${CANONICAL}…"
 /bin/mkdir -p "$HOME/Applications"
 if [ -e "$CANONICAL" ]; then
   backup="/tmp/MailKeep-old-$(/bin/date +%Y%m%d-%H%M%S).app"
