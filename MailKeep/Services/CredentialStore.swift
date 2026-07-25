@@ -1,0 +1,139 @@
+import Foundation
+
+/// File-backed credential store — the primary backend for IMAP passwords and
+/// OAuth tokens.
+///
+/// Why not the Keychain: this app is built with an unpaid Apple account, so every
+/// rebuild is ad-hoc signed with a new identity. Legacy-Keychain ACLs are bound to
+/// the signing identity, causing permission prompts on manual launches and silent
+/// errSecInteractionNotAllowed failures at Login Item startup. Same rationale as
+/// accounts.json (commit 988c522), now applied to credentials.
+///
+/// Storage: ~/Library/Application Support/MailKeep/credentials.json,
+/// POSIX 0600, atomic writes. FileVault provides at-rest encryption.
+actor CredentialStore {
+    static let shared = CredentialStore()
+
+    /// Override the credentials file URL in tests. Reset to nil in tearDown.
+    nonisolated(unsafe) static var testFileOverride: URL? = nil
+
+    private struct FileContents: Codable {
+        var passwords: [String: String] = [:]
+        var oauthTokens: [String: String] = [:]
+    }
+
+    nonisolated static var fileURL: URL {
+        if let override = testFileOverride { return override }
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return appSupport.appendingPathComponent("MailKeep/credentials.json")
+    }
+
+    // MARK: - File I/O
+
+    private nonisolated static func load() throws -> FileContents {
+        let url = fileURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return FileContents() }
+        let data = try Data(contentsOf: url)
+        do {
+            return try JSONDecoder().decode(FileContents.self, from: data)
+        } catch {
+            // Corrupt file: preserve for manual recovery, start fresh. The user can
+            // re-enter credentials via the missing-credentials prompt.
+            let backup = url.deletingPathExtension().appendingPathExtension("corrupt.json")
+            try? FileManager.default.removeItem(at: backup)
+            try? FileManager.default.moveItem(at: url, to: backup)
+            logError("credentials.json is corrupt — moved to \(backup.lastPathComponent), starting fresh")
+            return FileContents()
+        }
+    }
+
+    private nonisolated static func save(_ contents: FileContents) throws {
+        let url = fileURL
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let data = try JSONEncoder().encode(contents)
+        try data.write(to: url, options: .atomic)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600], ofItemAtPath: url.path)
+    }
+
+    // MARK: - Passwords
+
+    func savePassword(_ password: String, for accountId: UUID) throws {
+        var contents = try Self.load()
+        contents.passwords[accountId.uuidString] = password
+        try Self.save(contents)
+    }
+
+    func getPassword(for accountId: UUID) throws -> String {
+        guard let password = try Self.load().passwords[accountId.uuidString] else {
+            throw CredentialStoreError.notFound
+        }
+        return password
+    }
+
+    func deletePassword(for accountId: UUID) throws {
+        var contents = try Self.load()
+        contents.passwords.removeValue(forKey: accountId.uuidString)
+        try Self.save(contents)
+    }
+
+    func hasPassword(for accountId: UUID) -> Bool {
+        ((try? Self.load())?.passwords[accountId.uuidString]) != nil
+    }
+
+    // MARK: - OAuth tokens (JSON-encoded GoogleOAuthTokens strings)
+
+    func saveOAuthTokenString(_ token: String, for accountId: UUID) throws {
+        var contents = try Self.load()
+        contents.oauthTokens[accountId.uuidString] = token
+        try Self.save(contents)
+    }
+
+    func getOAuthTokenString(for accountId: UUID) throws -> String {
+        guard let token = try Self.load().oauthTokens[accountId.uuidString] else {
+            throw CredentialStoreError.notFound
+        }
+        return token
+    }
+
+    func deleteOAuthTokenString(for accountId: UUID) throws {
+        var contents = try Self.load()
+        contents.oauthTokens.removeValue(forKey: accountId.uuidString)
+        try Self.save(contents)
+    }
+
+    func hasOAuthToken(for accountId: UUID) -> Bool {
+        ((try? Self.load())?.oauthTokens[accountId.uuidString]) != nil
+    }
+
+    // MARK: - Migration import
+
+    /// Merge credentials read from the legacy Keychain into the file store.
+    /// Existing file entries always win (post-migration edits live in the file).
+    /// Called synchronously at app startup (MigrationService) before any other
+    /// CredentialStore access, so the nonisolated file write is safe.
+    nonisolated static func importIfAbsent(
+        passwords: [String: String], oauthTokens: [String: String]) throws {
+        var contents = try load()
+        for (key, value) in passwords where contents.passwords[key] == nil {
+            contents.passwords[key] = value
+        }
+        for (key, value) in oauthTokens where contents.oauthTokens[key] == nil {
+            contents.oauthTokens[key] = value
+        }
+        try save(contents)
+    }
+}
+
+enum CredentialStoreError: LocalizedError {
+    case notFound
+
+    var errorDescription: String? {
+        switch self {
+        case .notFound:
+            return "Credential not found — re-enter it in Settings → Accounts"
+        }
+    }
+}
