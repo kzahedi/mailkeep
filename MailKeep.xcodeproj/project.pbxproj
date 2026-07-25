@@ -58,6 +58,7 @@
 		B10000010000000000000023 /* CredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000023 /* CredentialStore.swift */; };
 		B10000010000000000000031 /* CredentialProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000031 /* CredentialProbeService.swift */; };
 		B10000010000000000000032 /* IMAPServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000032 /* IMAPServiceProtocol.swift */; };
+		B10000010000000000000033 /* BackupManager+CredentialProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000033 /* BackupManager+CredentialProbe.swift */; };
 			C10000010000000000000001 /* EmailParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000001 /* EmailParserTests.swift */; };
 		C10000010000000000000003 /* SearchServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000003 /* SearchServiceTests.swift */; };
 		C10000010000000000000004 /* StorageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000004 /* StorageServiceTests.swift */; };
@@ -161,6 +162,7 @@
 		B10000020000000000000023 /* CredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStore.swift; sourceTree = "<group>"; };
 		B10000020000000000000031 /* CredentialProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialProbeService.swift; sourceTree = "<group>"; };
 		B10000020000000000000032 /* IMAPServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAPServiceProtocol.swift; sourceTree = "<group>"; };
+		B10000020000000000000033 /* BackupManager+CredentialProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BackupManager+CredentialProbe.swift"; sourceTree = "<group>"; };
 			B10000030000000000000001 /* IMAPBackup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailKeep.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000020000000000000001 /* EmailParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailParserTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000003 /* SearchServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchServiceTests.swift; sourceTree = "<group>"; };
@@ -330,6 +332,7 @@
 				B10000020000000000000023 /* CredentialStore.swift */,
 				B10000020000000000000031 /* CredentialProbeService.swift */,
 				B10000020000000000000032 /* IMAPServiceProtocol.swift */,
+				B10000020000000000000033 /* BackupManager+CredentialProbe.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -596,6 +599,7 @@
 				B10000010000000000000023 /* CredentialStore.swift in Sources */,
 				B10000010000000000000031 /* CredentialProbeService.swift in Sources */,
 				B10000010000000000000032 /* IMAPServiceProtocol.swift in Sources */,
+				B10000010000000000000033 /* BackupManager+CredentialProbe.swift in Sources */,
 				B10000010000000000000030 /* OAuthSecrets.swift in Sources */,
 				A5C49FDF0FB7BEFC04C42FDC /* GeneralSettingsView.swift in Sources */,
 				9558083E7FEEFE8839C88ACB /* ScheduleSettingsView.swift in Sources */,

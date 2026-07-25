@@ -25,6 +25,7 @@ class BackupManager: ObservableObject {
     var activeIMAPServices: [UUID: IMAPService] = [:]  // Account ID -> Active IMAP Service
     var cancellables = Set<AnyCancellable>()
     var scheduleTimer: Timer?
+    var probeTimer: Timer?
 
     // MARK: - Progress Throttling
     /// Pending progress updates to be flushed to UI
@@ -99,6 +100,9 @@ class BackupManager: ObservableObject {
 
         // Start IDLE monitoring if enabled
         startIDLEMonitoring()
+
+        // Start daily credential probe timer (guarded against XCTest host)
+        startCredentialProbeTimer()
     }
 
     /// Subscribe to rate limit settings changes and propagate to active IMAP services

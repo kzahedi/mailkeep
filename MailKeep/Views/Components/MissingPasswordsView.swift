@@ -25,7 +25,7 @@ struct MissingPasswordsView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("The following accounts need their credentials re-entered.\nThis can happen after migrating from a previous version.")
+                Text("The following accounts need attention: the stored password or Google authorization no longer works.\nRe-enter the password or re-authorize below.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
