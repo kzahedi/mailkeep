@@ -130,61 +130,52 @@ struct EmailAccount: Identifiable, Codable, Hashable {
         self.idleEnabled = idleEnabled
     }
 
-    /// Get password from Keychain
+    /// Get password from the credential store
     func getPassword() async -> String? {
         // First check if we have a temporary password (during account creation)
         if let tempPassword = _password, !tempPassword.isEmpty {
             return tempPassword
         }
-        // Otherwise fetch from Keychain
-        return try? await KeychainService.shared.getPassword(for: id)
+        return try? await CredentialStore.shared.getPassword(for: id)
     }
 
-    /// Save password to Keychain
+    /// Save password to the credential store
     func savePassword(_ password: String) async throws {
-        try await KeychainService.shared.savePassword(password, for: id)
+        try await CredentialStore.shared.savePassword(password, for: id)
     }
 
-    /// Delete password from Keychain
+    /// Delete password from the credential store
     func deletePassword() async throws {
-        try await KeychainService.shared.deletePassword(for: id)
+        try await CredentialStore.shared.deletePassword(for: id)
     }
 
     /// Check if password exists
     func hasPassword() async -> Bool {
         if _password != nil { return true }
-        return await KeychainService.shared.hasPassword(for: id)
+        return await CredentialStore.shared.hasPassword(for: id)
     }
 
     // MARK: - OAuth Token Management
 
-    /// Keychain key for OAuth tokens
-    private var oauthTokenKey: String {
-        "oauth_\(id.uuidString)"
-    }
-
-    /// Save OAuth tokens to Keychain
     func saveOAuthTokens(_ tokens: GoogleOAuthTokens) async throws {
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(tokens)
+        let data = try JSONEncoder().encode(tokens)
         guard let tokenString = String(data: data, encoding: .utf8) else {
-            throw NSError(domain: "EmailAccount", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to encode OAuth tokens"])
+            throw NSError(domain: "EmailAccount", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to encode OAuth tokens"])
         }
-        try await KeychainService.shared.savePassword(tokenString, for: id, service: "com.kzahedi.MailKeep.oauth")
+        try await CredentialStore.shared.saveOAuthTokenString(tokenString, for: id)
     }
 
-    /// Get OAuth tokens from Keychain
     func getOAuthTokens() async -> GoogleOAuthTokens? {
-        guard let tokenString = try? await KeychainService.shared.getPassword(for: id, service: "com.kzahedi.MailKeep.oauth"),
+        guard let tokenString = try? await CredentialStore.shared.getOAuthTokenString(for: id),
               let data = tokenString.data(using: .utf8) else {
             return nil
         }
         return try? JSONDecoder().decode(GoogleOAuthTokens.self, from: data)
     }
 
-    /// Delete OAuth tokens from Keychain
     func deleteOAuthTokens() async throws {
-        try await KeychainService.shared.deletePassword(for: id, service: "com.kzahedi.MailKeep.oauth")
+        try await CredentialStore.shared.deleteOAuthTokenString(for: id)
     }
 
     /// Get a valid access token, refreshing if necessary

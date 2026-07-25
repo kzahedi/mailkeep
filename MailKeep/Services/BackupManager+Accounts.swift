@@ -19,20 +19,20 @@ extension BackupManager {
 
     // MARK: - Password Management
 
-    /// Check all accounts for missing passwords
+    /// Check all accounts for missing credentials (passwords AND OAuth tokens)
     func checkForMissingPasswords() {
         Task {
             var missing: [EmailAccount] = []
             for account in accounts {
-                // Only check password-based accounts, not OAuth
-                guard account.authType == .password else { continue }
-
-                let hasPassword = await KeychainService.shared.hasPassword(for: account.id)
-                if !hasPassword {
-                    missing.append(account)
+                switch account.authType {
+                case .password:
+                    let has = await CredentialStore.shared.hasPassword(for: account.id)
+                    if !has { missing.append(account) }
+                case .oauth2:
+                    let has = await CredentialStore.shared.hasOAuthToken(for: account.id)
+                    if !has { missing.append(account) }
                 }
             }
-
             await MainActor.run {
                 self.accountsWithMissingPasswords = missing
             }
@@ -55,8 +55,8 @@ extension BackupManager {
         // any code running immediately after addAccount() can read credentials.
         let passwordToSave = password ?? mutableAccount.consumeTemporaryPassword()
         if let passwordToSave = passwordToSave {
-            try await KeychainService.shared.savePassword(passwordToSave, for: account.id)
-            logInfo("Password saved to Keychain for \(account.email)")
+            try await CredentialStore.shared.savePassword(passwordToSave, for: account.id)
+            logInfo("Password saved to credential store for \(account.email)")
         }
 
         accounts.append(mutableAccount)
@@ -69,12 +69,13 @@ extension BackupManager {
         accounts.removeAll { $0.id == account.id }
         saveAccounts()
         Task { await IDLEManager.shared.stopMonitoring(accountId: account.id) }
-        // Remove password from Keychain
+        // Remove credentials from the credential store
         Task {
             do {
-                try await KeychainService.shared.deletePassword(for: account.id)
+                try await CredentialStore.shared.deletePassword(for: account.id)
+                try await CredentialStore.shared.deleteOAuthTokenString(for: account.id)
             } catch {
-                logWarning("Failed to delete password from Keychain for \(account.email): \(error.localizedDescription)")
+                logWarning("Failed to delete credentials for \(account.email): \(error.localizedDescription)")
             }
         }
     }
@@ -88,9 +89,9 @@ extension BackupManager {
             if let password = password {
                 Task {
                     do {
-                        try await KeychainService.shared.savePassword(password, for: account.id)
+                        try await CredentialStore.shared.savePassword(password, for: account.id)
                     } catch {
-                        logError("Failed to update password in Keychain for \(account.email): \(error.localizedDescription)")
+                        logError("Failed to update password in credential store for \(account.email): \(error.localizedDescription)")
                     }
                 }
             }

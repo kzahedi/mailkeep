@@ -5,8 +5,9 @@ import XCTest
 ///
 /// Accounts are stored as a JSON file in Application Support.
 /// Tests redirect both the accounts file (via testAccountsFileOverride) and the
-/// Keychain account-list (via testServiceOverride) to isolated namespaces so no
-/// production data is read, written, or deleted during test runs.
+/// Keychain account-list (via testServiceOverride) to isolated, unique-per-run namespaces
+/// so no production data is read, written, or deleted during test runs, and so that a
+/// differently-signed test runner can never touch another run's items (preventing keychain prompts).
 @MainActor
 final class BackupManagerAccountsTests: XCTestCase {
 
@@ -23,8 +24,11 @@ final class BackupManagerAccountsTests: XCTestCase {
         BackupManager.testAccountsFileOverride = tempDir.appendingPathComponent("accounts.json")
 
         // Isolated Keychain namespace for migration tests
-        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.uitesting"
+        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.test-\(UUID().uuidString)"
         try? KeychainService.shared.deleteAccountList()
+
+        // Isolated CredentialStore file for credential tests
+        CredentialStore.testFileOverride = tempDir.appendingPathComponent("credentials.json")
 
         // Clear any UserDefaults residue
         UserDefaults.standard.removeObject(forKey: accountsKey)
@@ -40,6 +44,8 @@ final class BackupManagerAccountsTests: XCTestCase {
         // Remove isolated Keychain entry and restore routing to production
         try? KeychainService.shared.deleteAccountList()
         KeychainService.testServiceOverride = nil
+
+        CredentialStore.testFileOverride = nil
 
         UserDefaults.standard.removeObject(forKey: accountsKey)
         super.tearDown()
@@ -122,6 +128,29 @@ final class BackupManagerAccountsTests: XCTestCase {
         let reloader = BackupManager()
         XCTAssertEqual(reloader.accounts.count, 1)
         XCTAssertEqual(reloader.accounts.first?.email, "keychain@example.com")
+    }
+
+    func testAddAccountStoresPasswordInCredentialStore() async throws {
+        let backupManager = BackupManager()
+        let account = EmailAccount(email: "file@example.com", imapServer: "imap.example.com")
+        let added = try await backupManager.addAccount(account, password: "file-pw")
+        XCTAssertTrue(added)
+        let stored = try await CredentialStore.shared.getPassword(for: account.id)
+        XCTAssertEqual(stored, "file-pw")
+    }
+
+    func testRemoveAccountDeletesCredentials() async throws {
+        let backupManager = BackupManager()
+        let account = EmailAccount(email: "gone@example.com", imapServer: "imap.example.com")
+        _ = try await backupManager.addAccount(account, password: "pw")
+        backupManager.removeAccount(account)
+        // removeAccount deletes asynchronously; poll briefly
+        for _ in 0..<50 {
+            let has = await CredentialStore.shared.hasPassword(for: account.id)
+            if !has { return }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        XCTFail("Password still present after removeAccount")
     }
 
     // MARK: - Helpers

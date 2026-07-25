@@ -21,7 +21,26 @@ actor KeychainService {
 
     private let credentialStoreAccount = "__credential_store__"
 
-    private func loadStore(service: String) -> [String: String] {
+    /// Map a SecItemCopyMatching result for the consolidated store into a store dictionary.
+    /// Only errSecItemNotFound means "genuinely empty". Any other failure throws so a
+    /// blocked read (e.g. errSecInteractionNotAllowed at Login Item startup) can never be
+    /// mistaken for an empty store and wipe existing passwords on the next save.
+    nonisolated static func decodeStoreResult(status: OSStatus, data: Data?) throws -> [String: String] {
+        switch status {
+        case errSecItemNotFound:
+            return [:]
+        case errSecSuccess:
+            guard let data,
+                  let dict = try? JSONDecoder().decode([String: String].self, from: data) else {
+                throw KeychainError.readFailed(errSecDecode)
+            }
+            return dict
+        default:
+            throw KeychainError.readFailed(status)
+        }
+    }
+
+    private func loadStore(service: String) throws -> [String: String] {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -30,12 +49,8 @@ actor KeychainService {
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
         var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data,
-              let dict = try? JSONDecoder().decode([String: String].self, from: data) else {
-            return [:]
-        }
-        return dict
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        return try Self.decodeStoreResult(status: status, data: result as? Data)
     }
 
     private func saveStore(_ store: [String: String], service: String) throws {
@@ -69,7 +84,7 @@ actor KeychainService {
     /// Save password to Keychain (consolidated store — one macOS prompt covers all accounts)
     func savePassword(_ password: String, for accountId: UUID, service: String? = nil) throws {
         let serviceName = service ?? defaultService
-        var store = loadStore(service: serviceName)
+        var store = try loadStore(service: serviceName)
         store[accountId.uuidString] = password
         try saveStore(store, service: serviceName)
     }
@@ -81,7 +96,7 @@ actor KeychainService {
         let serviceName = service ?? defaultService
 
         // Fast path: consolidated store
-        let store = loadStore(service: serviceName)
+        let store = try loadStore(service: serviceName)
         if let password = store[accountId.uuidString] {
             return password
         }
@@ -119,7 +134,7 @@ actor KeychainService {
     func deletePassword(for accountId: UUID, service: String? = nil) throws {
         let serviceName = service ?? defaultService
 
-        var store = loadStore(service: serviceName)
+        var store = try loadStore(service: serviceName)
         store.removeValue(forKey: accountId.uuidString)
         try saveStore(store, service: serviceName)
 
@@ -135,7 +150,7 @@ actor KeychainService {
     /// Check if a password exists (checks consolidated store, then legacy items)
     func hasPassword(for accountId: UUID, service: String? = nil) -> Bool {
         let serviceName = service ?? defaultService
-        let store = loadStore(service: serviceName)
+        let store = (try? loadStore(service: serviceName)) ?? [:]
         if store[accountId.uuidString] != nil { return true }
         // Check for unmigrated legacy item without triggering migration
         let legacyQuery: [String: Any] = [
@@ -251,6 +266,7 @@ enum KeychainError: LocalizedError {
     case saveFailed(OSStatus)
     case notFound
     case deleteFailed(OSStatus)
+    case readFailed(OSStatus)
 
     var errorDescription: String? {
         switch self {
@@ -262,6 +278,8 @@ enum KeychainError: LocalizedError {
             return "Password not found in Keychain"
         case .deleteFailed(let status):
             return "Failed to delete from Keychain (status: \(status))"
+        case .readFailed(let status):
+            return "Failed to read from Keychain (status: \(status)) — macOS may be blocking access after a rebuild changed the app's code signature"
         }
     }
 }
