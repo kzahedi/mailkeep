@@ -95,7 +95,7 @@ MailKeep supports two Gmail authentication methods:
 **OAuth2 (recommended)** — Sign in with your Google account directly. No app password needed.
 1. Click **Add Account** and select **Gmail**
 2. Choose **Sign in with Google** and complete the browser OAuth flow
-3. Credentials are stored in ~/Library/Application Support/MailKeep/credentials.json (readable only by your user, encrypted at rest by FileVault). See [Signing & Credential Store](docs/signing.md).
+3. Credentials are stored in ~/Library/Application Support/MailKeep/credentials.json (readable only by your user, encrypted at rest by FileVault). See [Stable Code Signing](docs/signing.md).
 
 If your OAuth tokens expire later (Google revokes them after inactivity), go to **Settings → Accounts**, click the Gmail account, and hit **Re-authorize with Google** — no need to delete and re-add the account.
 

@@ -56,3 +56,23 @@ manual launches to resolve to a fresh binary again.
   Legacy copies may still exist in the Keychain (services `com.kzahedi.MailKeep`
   and `com.kzahedi.MailKeep.oauth`) — they are intentionally left as a fallback
   and are no longer read outside one-time migration.
+
+## Backup health & credential probe (since 2026-07-25, merge e55438d)
+
+When debugging "account shows red/orange dot" or "credentials sheet keeps appearing":
+
+- The menubar dot derives from `BackupHistoryService.health(for:)` — red = ≥2
+  consecutive failed backups, orange = 1, green = no recent failure (note: also
+  green when there is NO history at all — known limitation).
+- A daily credential probe (real IMAP login, no mail transfer) runs at most once
+  per 24 h. Gate: UserDefaults `LastCredentialProbeDate`. Accounts it flags are
+  persisted in UserDefaults `ProbeFlaggedAccountIDs` and stay in the
+  missing-credentials sheet across restarts until a probe or backup succeeds.
+- Failure notifications are deduped to one per account per 24 h via UserDefaults
+  `HealthNotificationLastSent` (shared by backup-failure escalation and probe
+  alerts). Deleting that key re-arms notifications immediately.
+- Network errors never flag credentials: only `IMAPError.authenticationFailed` /
+  `.oauthFailed` do; OAuth token-refresh URLErrors are rethrown as
+  `connectionFailed` (transient) in `loginWithOAuth2`.
+- Do not delete `backup_history.json` to "reset" a red dot — fix the underlying
+  account; the dot clears on the next successful backup.
