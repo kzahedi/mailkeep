@@ -21,11 +21,11 @@ struct MissingPasswordsView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(.orange)
 
-                Text("Passwords Required")
+                Text("Credentials Required")
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("The following accounts need their passwords re-entered.\nThis can happen after migrating from a previous version.")
+                Text("The following accounts need their credentials re-entered.\nThis can happen after migrating from a previous version.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -93,9 +93,18 @@ struct MissingPasswordsView: View {
                 }
             }
 
-            SecureField("Password", text: binding(for: account.id))
-                .textFieldStyle(.roundedBorder)
+            if account.authType == .oauth2 {
+                Button {
+                    reauthorize(account)
+                } label: {
+                    Label("Re-authorize with Google", systemImage: "person.crop.circle.badge.checkmark")
+                }
                 .disabled(savingAccount != nil)
+            } else {
+                SecureField("Password", text: binding(for: account.id))
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(savingAccount != nil)
+            }
 
             Text(account.imapServer)
                 .font(.caption)
@@ -118,7 +127,8 @@ struct MissingPasswordsView: View {
 
         Task {
             for account in accountsNeedingPasswords {
-                guard let password = passwords[account.id], !password.isEmpty else {
+                guard account.authType == .password,
+                      let password = passwords[account.id], !password.isEmpty else {
                     continue
                 }
 
@@ -146,6 +156,28 @@ struct MissingPasswordsView: View {
                 if backupManager.accountsWithMissingPasswords.isEmpty {
                     dismiss()
                 }
+            }
+        }
+    }
+
+    private func reauthorize(_ account: EmailAccount) {
+        errorMessage = nil
+        savingAccount = account.id
+
+        Task {
+            do {
+                let tokens = try await GoogleOAuthService.shared.authorize()
+                try await account.saveOAuthTokens(tokens)
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Re-authorization failed for \(account.email): \(error.localizedDescription)"
+                    savingAccount = nil
+                }
+                return
+            }
+            await MainActor.run {
+                savingAccount = nil
+                backupManager.checkForMissingPasswords()
             }
         }
     }

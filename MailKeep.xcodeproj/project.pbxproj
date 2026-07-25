@@ -69,6 +69,7 @@
 		C1000001000000000000000C /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000C /* KeychainServiceTests.swift */; };
 		C1000001000000000000000D /* CredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000D /* CredentialStoreTests.swift */; };
 		C1000001000000000000000E /* CredentialMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000E /* CredentialMigrationTests.swift */; };
+		C1000001000000000000000F /* MissingCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000F /* MissingCredentialsTests.swift */; };
 			D10000010000000000000001 /* IMAPBackupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000001 /* IMAPBackupUITests.swift */; };
 		D10000010000000000000002 /* IMAPBackupUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000002 /* IMAPBackupUITestsLaunchTests.swift */; };
 		B10000010000000000000030 /* OAuthSecrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000030 /* OAuthSecrets.swift */; };
@@ -166,6 +167,7 @@
 		C1000002000000000000000C /* KeychainServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainServiceTests.swift; sourceTree = "<group>"; };
 		C1000002000000000000000D /* CredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStoreTests.swift; sourceTree = "<group>"; };
 		C1000002000000000000000E /* CredentialMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialMigrationTests.swift; sourceTree = "<group>"; };
+		C1000002000000000000000F /* MissingCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissingCredentialsTests.swift; sourceTree = "<group>"; };
 			C10000030000000000000002 /* IMAPBackupTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailKeepTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D10000020000000000000001 /* IMAPBackupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailKeepUITests.swift; sourceTree = "<group>"; };
 		D10000020000000000000002 /* IMAPBackupUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailKeepUITestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 				C1000002000000000000000C /* KeychainServiceTests.swift */,
 				C1000002000000000000000D /* CredentialStoreTests.swift */,
 				C1000002000000000000000E /* CredentialMigrationTests.swift */,
+				C1000002000000000000000F /* MissingCredentialsTests.swift */,
 				E100000200000004 /* IMAPServiceIDLETests.swift */,
 				E100000200000005 /* IDLEManagerTests.swift */,
 				E100000200000006 /* BackupManagerIDLETests.swift */,
@@ -602,6 +605,7 @@
 				C1000001000000000000000C /* KeychainServiceTests.swift in Sources */,
 				C1000001000000000000000D /* CredentialStoreTests.swift in Sources */,
 				C1000001000000000000000E /* CredentialMigrationTests.swift in Sources */,
+				C1000001000000000000000F /* MissingCredentialsTests.swift in Sources */,
 				E100000100000004 /* IMAPServiceIDLETests.swift in Sources */,
 				E100000100000005 /* IDLEManagerTests.swift in Sources */,
 				E100000100000006 /* BackupManagerIDLETests.swift in Sources */,

@@ -19,20 +19,20 @@ extension BackupManager {
 
     // MARK: - Password Management
 
-    /// Check all accounts for missing passwords
+    /// Check all accounts for missing credentials (passwords AND OAuth tokens)
     func checkForMissingPasswords() {
         Task {
             var missing: [EmailAccount] = []
             for account in accounts {
-                // Only check password-based accounts, not OAuth
-                guard account.authType == .password else { continue }
-
-                let hasPassword = await CredentialStore.shared.hasPassword(for: account.id)
-                if !hasPassword {
-                    missing.append(account)
+                switch account.authType {
+                case .password:
+                    let has = await CredentialStore.shared.hasPassword(for: account.id)
+                    if !has { missing.append(account) }
+                case .oauth2:
+                    let has = await CredentialStore.shared.hasOAuthToken(for: account.id)
+                    if !has { missing.append(account) }
                 }
             }
-
             await MainActor.run {
                 self.accountsWithMissingPasswords = missing
             }
