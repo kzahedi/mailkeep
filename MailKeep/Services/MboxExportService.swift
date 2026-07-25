@@ -8,7 +8,13 @@ struct MboxExportSummary: Equatable {
 /// Writes stored .eml files into a single mboxrd file (importable by
 /// Apple Mail, Thunderbird, mutt, …). A backup you can't restore elsewhere
 /// is a hope, not a backup — this is the "get my mail out" path.
-actor MboxExportService {
+///
+/// Stateless value type — `export` does fully synchronous, blocking file
+/// I/O with no suspension points, so it is not actor-isolated (an actor
+/// here would only monopolize a cooperative-pool thread while protecting
+/// no shared mutable state). Callers that want this off the main thread
+/// should run it from their own `Task.detached` / background context.
+struct MboxExportService: Sendable {
 
     enum MboxExportError: LocalizedError {
         case cannotCreateDestination(String)
@@ -56,11 +62,14 @@ actor MboxExportService {
     ///
     /// Splitting on 0x0A with `omittingEmptySubsequences: false` yields one
     /// element per line, including a trailing empty element when the data
-    /// already ends in "\n" (that empty element re-emits as a bare newline,
-    /// which becomes the message's terminating newline). We then append a
-    /// second newline to create the blank line mbox uses to separate
-    /// messages. Net effect versus the raw input: exactly one extra blank
-    /// line after each message — legal mbox, and what the tests assert.
+    /// already ends in "\n" (that empty element re-emits as a bare newline).
+    /// We then unconditionally append one more newline to create the blank
+    /// line mbox uses to separate messages. Net effect: a message whose raw
+    /// bytes already end in "\n" gets TWO trailing newlines in the output
+    /// (one blank line from the reconstructed input, one appended
+    /// separator line) — legal mbox, just not literally "exactly one extra
+    /// blank line" in every case. A message with no trailing newline gets
+    /// exactly one appended blank line.
     static func mboxrdBody(from raw: Data) -> Data {
         var normalized = Data(capacity: raw.count)
         var i = raw.startIndex
