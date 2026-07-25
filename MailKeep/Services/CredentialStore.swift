@@ -17,6 +17,10 @@ actor CredentialStore {
     /// Override the credentials file URL in tests. Reset to nil in tearDown.
     nonisolated(unsafe) static var testFileOverride: URL? = nil
 
+    /// Lock serializing all file reads and writes to prevent TOCTOU races
+    /// between actor methods (synchronous, no suspension) and nonisolated importIfAbsent.
+    private static let fileLock = NSLock()
+
     private struct FileContents: Codable {
         var passwords: [String: String] = [:]
         var oauthTokens: [String: String] = [:]
@@ -30,6 +34,12 @@ actor CredentialStore {
     }
 
     // MARK: - File I/O
+
+    private static func withLock<T>(_ body: () throws -> T) rethrows -> T {
+        fileLock.lock()
+        defer { fileLock.unlock() }
+        return try body()
+    }
 
     private nonisolated static func load() throws -> FileContents {
         let url = fileURL
@@ -61,69 +71,86 @@ actor CredentialStore {
     // MARK: - Passwords
 
     func savePassword(_ password: String, for accountId: UUID) throws {
-        var contents = try Self.load()
-        contents.passwords[accountId.uuidString] = password
-        try Self.save(contents)
+        try Self.withLock {
+            var contents = try Self.load()
+            contents.passwords[accountId.uuidString] = password
+            try Self.save(contents)
+        }
     }
 
     func getPassword(for accountId: UUID) throws -> String {
-        guard let password = try Self.load().passwords[accountId.uuidString] else {
-            throw CredentialStoreError.notFound
+        try Self.withLock {
+            guard let password = try Self.load().passwords[accountId.uuidString] else {
+                throw CredentialStoreError.notFound
+            }
+            return password
         }
-        return password
     }
 
     func deletePassword(for accountId: UUID) throws {
-        var contents = try Self.load()
-        contents.passwords.removeValue(forKey: accountId.uuidString)
-        try Self.save(contents)
+        try Self.withLock {
+            var contents = try Self.load()
+            contents.passwords.removeValue(forKey: accountId.uuidString)
+            try Self.save(contents)
+        }
     }
 
     func hasPassword(for accountId: UUID) -> Bool {
-        ((try? Self.load())?.passwords[accountId.uuidString]) != nil
+        (try? Self.withLock {
+            (try Self.load()).passwords[accountId.uuidString] != nil
+        }) ?? false
     }
 
     // MARK: - OAuth tokens (JSON-encoded GoogleOAuthTokens strings)
 
     func saveOAuthTokenString(_ token: String, for accountId: UUID) throws {
-        var contents = try Self.load()
-        contents.oauthTokens[accountId.uuidString] = token
-        try Self.save(contents)
+        try Self.withLock {
+            var contents = try Self.load()
+            contents.oauthTokens[accountId.uuidString] = token
+            try Self.save(contents)
+        }
     }
 
     func getOAuthTokenString(for accountId: UUID) throws -> String {
-        guard let token = try Self.load().oauthTokens[accountId.uuidString] else {
-            throw CredentialStoreError.notFound
+        try Self.withLock {
+            guard let token = try Self.load().oauthTokens[accountId.uuidString] else {
+                throw CredentialStoreError.notFound
+            }
+            return token
         }
-        return token
     }
 
     func deleteOAuthTokenString(for accountId: UUID) throws {
-        var contents = try Self.load()
-        contents.oauthTokens.removeValue(forKey: accountId.uuidString)
-        try Self.save(contents)
+        try Self.withLock {
+            var contents = try Self.load()
+            contents.oauthTokens.removeValue(forKey: accountId.uuidString)
+            try Self.save(contents)
+        }
     }
 
     func hasOAuthToken(for accountId: UUID) -> Bool {
-        ((try? Self.load())?.oauthTokens[accountId.uuidString]) != nil
+        (try? Self.withLock {
+            (try Self.load()).oauthTokens[accountId.uuidString] != nil
+        }) ?? false
     }
 
     // MARK: - Migration import
 
     /// Merge credentials read from the legacy Keychain into the file store.
     /// Existing file entries always win (post-migration edits live in the file).
-    /// Called synchronously at app startup (MigrationService) before any other
-    /// CredentialStore access, so the nonisolated file write is safe.
+    /// Serialization is enforced by fileLock to prevent TOCTOU races with actor methods.
     nonisolated static func importIfAbsent(
         passwords: [String: String], oauthTokens: [String: String]) throws {
-        var contents = try load()
-        for (key, value) in passwords where contents.passwords[key] == nil {
-            contents.passwords[key] = value
+        try withLock {
+            var contents = try load()
+            for (key, value) in passwords where contents.passwords[key] == nil {
+                contents.passwords[key] = value
+            }
+            for (key, value) in oauthTokens where contents.oauthTokens[key] == nil {
+                contents.oauthTokens[key] = value
+            }
+            try save(contents)
         }
-        for (key, value) in oauthTokens where contents.oauthTokens[key] == nil {
-            contents.oauthTokens[key] = value
-        }
-        try save(contents)
     }
 }
 
