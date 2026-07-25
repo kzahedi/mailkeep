@@ -39,6 +39,7 @@ After `install.sh` the system holds **exactly one** `MailKeep.app`:
 - Launch Services: one registration, that path
 - Login Item: that path
 - `mdfind "kMDItemCFBundleIdentifier == com.kzahedi.MailKeep"` returns one line
+- Credentials: `~/Library/Application Support/MailKeep/credentials.json` (0600)
 
 Any deviation = drift. The DerivedData builds Xcode produces during development
 will re-register themselves — that's expected. Re-run `install.sh` when you want
@@ -49,6 +50,9 @@ manual launches to resolve to a fresh binary again.
 - Do not start rewriting the account-loading code — it works.
 - Do not blame Keychain ACLs — that was the original bug and is already fixed.
 - Do not write a new "fix" before running `check-installs.sh`.
-- Do not delete `~/Library/Application Support/MailKeep/accounts.json`. It contains
-  the real account list. Backups: `~/Library/Application Support/MailKeep/Logs/`
-  has historical logs but no account list backup; passwords live in Keychain.
+- Do not delete `~/Library/Application Support/MailKeep/accounts.json` or
+  `credentials.json`. accounts.json is the account list; credentials.json holds
+  IMAP passwords and OAuth tokens (since the file-store migration, 2026-07).
+  Legacy copies may still exist in the Keychain (services `com.kzahedi.MailKeep`
+  and `com.kzahedi.MailKeep.oauth`) — they are intentionally left as a fallback
+  and are no longer read outside one-time migration.

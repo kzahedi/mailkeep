@@ -56,7 +56,7 @@ struct AdvancedSettingsView: View {
                 HStack {
                     Image(systemName: "lock.shield.fill")
                         .foregroundStyle(.green)
-                    Text("OAuth tokens are stored securely in the macOS Keychain.")
+                    Text("Credentials are stored in ~/Library/Application Support/MailKeep/credentials.json (readable only by your user, encrypted at rest by FileVault).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
