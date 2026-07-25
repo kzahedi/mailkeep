@@ -25,6 +25,7 @@ Supports Gmail (OAuth2 and App Passwords), IONOS, and any custom IMAP server.
 - **Scheduled backups** - Manual, hourly, daily, or weekly with custom time selection
 - **Launch at login** - Start automatically when your Mac starts
 - **Menubar app** - Quick access to backup status and controls
+- **Backup-health menubar badge** - Per-account green/red status dot in the menubar, with a notification on new failures
 - **System notifications** - Get notified when backups complete or fail
 
 ### Storage & Management
@@ -33,12 +34,14 @@ Supports Gmail (OAuth2 and App Passwords), IONOS, and any custom IMAP server.
 - **Retention policies** - Auto-delete old backups by age or count
 - **Backup verification** - Verify backed up emails match server state
 - **Large attachment streaming** - Stream large files to disk instead of loading to memory
+- **.mbox export** - Export a backed-up account to a single .mbox file for import into Apple Mail, Thunderbird, or other clients
 
 ### Reliability & Performance
 - **Connection recovery** - Automatically reconnect on network failures
 - **Rate limiting** - Respect server limits with configurable throttling
 - **Retry with backoff** - Automatic retry on failures with exponential backoff
 - **Cache validation** - Automatic UID cache repair on startup
+- **Daily credential probe** - Proactively checks account credentials once a day so auth failures surface before a scheduled backup runs
 - **Detailed error logging** - Debug issues with comprehensive logs
 
 ### User Interface

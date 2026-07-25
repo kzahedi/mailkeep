@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct MainWindowView: View {
     @EnvironmentObject var backupManager: BackupManager
@@ -112,6 +113,9 @@ struct AccountDetailView: View {
     @EnvironmentObject var backupManager: BackupManager
     let account: EmailAccount
 
+    @State private var isExporting = false
+    @State private var exportMessage: String?
+
     var progress: BackupProgress? {
         backupManager.progress[account.id]
     }
@@ -170,6 +174,23 @@ struct AccountDetailView: View {
                     }) {
                         Label("Open in Finder", systemImage: "folder")
                     }
+
+                    Button(action: {
+                        exportAccount()
+                    }) {
+                        if isExporting {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Label("Export as .mbox…", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                    .disabled(isExporting)
+                }
+
+                if let exportMessage = exportMessage {
+                    Text(exportMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 // Errors
@@ -180,6 +201,35 @@ struct AccountDetailView: View {
                 Spacer()
             }
             .padding()
+        }
+    }
+
+    private func exportAccount() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "\(account.email).mbox"
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+
+        isExporting = true
+        exportMessage = nil
+        let storage = StorageService(baseURL: backupManager.backupLocation)
+        let accountEmail = account.email
+
+        Task.detached(priority: .userInitiated) {
+            do {
+                let files = try await storage.listEmailFiles(accountEmail: accountEmail)
+                let summary = try MboxExportService().export(emlFiles: files, to: destination)
+                await MainActor.run {
+                    isExporting = false
+                    exportMessage = "Exported \(summary.exported) emails" +
+                        (summary.skippedUnreadable > 0 ? " (\(summary.skippedUnreadable) unreadable skipped)" : "")
+                }
+            } catch {
+                await MainActor.run {
+                    isExporting = false
+                    exportMessage = "Export failed: \(error.localizedDescription)"
+                }
+            }
         }
     }
 
