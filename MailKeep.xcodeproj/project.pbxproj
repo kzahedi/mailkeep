@@ -56,6 +56,8 @@
 		B10000010000000000000020 /* GoogleOAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000020 /* GoogleOAuthService.swift */; };
 		B10000010000000000000021 /* MigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000021 /* MigrationService.swift */; };
 		B10000010000000000000023 /* CredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000023 /* CredentialStore.swift */; };
+		B10000010000000000000031 /* CredentialProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000031 /* CredentialProbeService.swift */; };
+		B10000010000000000000032 /* IMAPServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000032 /* IMAPServiceProtocol.swift */; };
 			C10000010000000000000001 /* EmailParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000001 /* EmailParserTests.swift */; };
 		C10000010000000000000003 /* SearchServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000003 /* SearchServiceTests.swift */; };
 		C10000010000000000000004 /* StorageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000004 /* StorageServiceTests.swift */; };
@@ -71,6 +73,8 @@
 		C1000001000000000000000E /* CredentialMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000E /* CredentialMigrationTests.swift */; };
 		C1000001000000000000000F /* MissingCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000F /* MissingCredentialsTests.swift */; };
 		C10000010000000000000010 /* GoogleOAuthServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000010 /* GoogleOAuthServiceTests.swift */; };
+		C10000010000000000000012 /* CredentialProbeServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000012 /* CredentialProbeServiceTests.swift */; };
+		C10000010000000000000013 /* MockIMAPService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000013 /* MockIMAPService.swift */; };
 		C10000010000000000000011 /* BackupHealthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000011 /* BackupHealthTests.swift */; };
 			D10000010000000000000001 /* IMAPBackupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000001 /* IMAPBackupUITests.swift */; };
 		D10000010000000000000002 /* IMAPBackupUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000002 /* IMAPBackupUITestsLaunchTests.swift */; };
@@ -155,6 +159,8 @@
 		B10000020000000000000020 /* GoogleOAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleOAuthService.swift; sourceTree = "<group>"; };
 		B10000020000000000000021 /* MigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationService.swift; sourceTree = "<group>"; };
 		B10000020000000000000023 /* CredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStore.swift; sourceTree = "<group>"; };
+		B10000020000000000000031 /* CredentialProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialProbeService.swift; sourceTree = "<group>"; };
+		B10000020000000000000032 /* IMAPServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAPServiceProtocol.swift; sourceTree = "<group>"; };
 			B10000030000000000000001 /* IMAPBackup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailKeep.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000020000000000000001 /* EmailParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailParserTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000003 /* SearchServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchServiceTests.swift; sourceTree = "<group>"; };
@@ -171,6 +177,8 @@
 		C1000002000000000000000E /* CredentialMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialMigrationTests.swift; sourceTree = "<group>"; };
 		C1000002000000000000000F /* MissingCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissingCredentialsTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000010 /* GoogleOAuthServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleOAuthServiceTests.swift; sourceTree = "<group>"; };
+		C10000020000000000000012 /* CredentialProbeServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialProbeServiceTests.swift; sourceTree = "<group>"; };
+		C10000020000000000000013 /* MockIMAPService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mocks/MockIMAPService.swift; sourceTree = "<group>"; };
 		C10000020000000000000011 /* BackupHealthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupHealthTests.swift; sourceTree = "<group>"; };
 			C10000030000000000000002 /* IMAPBackupTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailKeepTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D10000020000000000000001 /* IMAPBackupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailKeepUITests.swift; sourceTree = "<group>"; };
@@ -320,6 +328,8 @@
 				B10000020000000000000020 /* GoogleOAuthService.swift */,
 				B10000020000000000000021 /* MigrationService.swift */,
 				B10000020000000000000023 /* CredentialStore.swift */,
+				B10000020000000000000031 /* CredentialProbeService.swift */,
+				B10000020000000000000032 /* IMAPServiceProtocol.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -387,6 +397,8 @@
 				C1000002000000000000000F /* MissingCredentialsTests.swift */,
 				C10000020000000000000010 /* GoogleOAuthServiceTests.swift */,
 				C10000020000000000000011 /* BackupHealthTests.swift */,
+				C10000020000000000000012 /* CredentialProbeServiceTests.swift */,
+				C10000020000000000000013 /* MockIMAPService.swift */,
 				E100000200000004 /* IMAPServiceIDLETests.swift */,
 				E100000200000005 /* IDLEManagerTests.swift */,
 				E100000200000006 /* BackupManagerIDLETests.swift */,
@@ -582,6 +594,8 @@
 				B10000010000000000000020 /* GoogleOAuthService.swift in Sources */,
 				B10000010000000000000021 /* MigrationService.swift in Sources */,
 				B10000010000000000000023 /* CredentialStore.swift in Sources */,
+				B10000010000000000000031 /* CredentialProbeService.swift in Sources */,
+				B10000010000000000000032 /* IMAPServiceProtocol.swift in Sources */,
 				B10000010000000000000030 /* OAuthSecrets.swift in Sources */,
 				A5C49FDF0FB7BEFC04C42FDC /* GeneralSettingsView.swift in Sources */,
 				9558083E7FEEFE8839C88ACB /* ScheduleSettingsView.swift in Sources */,
@@ -613,6 +627,8 @@
 				C1000001000000000000000E /* CredentialMigrationTests.swift in Sources */,
 				C1000001000000000000000F /* MissingCredentialsTests.swift in Sources */,
 				C10000010000000000000010 /* GoogleOAuthServiceTests.swift in Sources */,
+				C10000010000000000000012 /* CredentialProbeServiceTests.swift in Sources */,
+				C10000010000000000000013 /* MockIMAPService.swift in Sources */,
 				C10000010000000000000011 /* BackupHealthTests.swift in Sources */,
 				E100000100000004 /* IMAPServiceIDLETests.swift in Sources */,
 				E100000100000005 /* IDLEManagerTests.swift in Sources */,

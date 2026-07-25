@@ -176,11 +176,10 @@ actor MockIMAPService: IMAPServiceProtocol {
 
                 headers.append(EmailHeader(
                     uid: uid,
-                    flags: [],
-                    subject: subject,
-                    from: from,
-                    date: Date(),
                     messageId: "test-\(uid)@example.com",
+                    from: from,
+                    subject: subject,
+                    date: Date(),
                     hasAttachments: false,
                     size: data.count
                 ))
@@ -237,6 +236,39 @@ actor MockIMAPService: IMAPServiceProtocol {
 
         let folderEmails = emails[folder] ?? [:]
         return Array(folderEmails.keys).sorted()
+    }
+
+    func fetchNewUIDs(after lastUID: UInt32) async throws -> [UInt32] {
+        guard let folder = selectedFolder else {
+            throw IMAPError.notConnected
+        }
+
+        let folderEmails = emails[folder] ?? [:]
+        return folderEmails.keys.filter { $0 > lastUID }.sorted()
+    }
+
+    func fetchLastUID() async throws -> UInt32 {
+        guard let folder = selectedFolder else {
+            throw IMAPError.notConnected
+        }
+
+        let folderEmails = emails[folder] ?? [:]
+        return folderEmails.keys.max() ?? 0
+    }
+
+    func waitForIDLENotification(timeout: TimeInterval) async throws -> IDLENotification {
+        .timeout
+    }
+
+    // MARK: - Actor-isolated setters (external callers can't assign actor-isolated
+    // stored properties directly; these provide an async-safe seam for tests).
+
+    func setShouldFailConnect(_ value: Bool) {
+        shouldFailConnect = value
+    }
+
+    func setShouldFailLogin(_ value: Bool) {
+        shouldFailLogin = value
     }
 
     // MARK: - Helper
