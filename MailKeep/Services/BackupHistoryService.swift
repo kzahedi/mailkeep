@@ -7,7 +7,7 @@ class BackupHistoryService: ObservableObject {
 
     @Published private(set) var entries: [BackupHistoryEntry] = []
 
-    private let maxEntries = 100
+    private let maxEntries = 500
     /// Legacy key — used only for one-time migration from UserDefaults to the file store.
     private let legacyHistoryKey = "BackupHistory"
     /// Override directory for unit tests. `nil` → uses Application Support/MailKeep.
@@ -148,5 +148,24 @@ class BackupHistoryService: ObservableObject {
         if entries.count > maxEntries {
             entries = Array(entries.prefix(maxEntries))
         }
+    }
+
+    // MARK: - Health Computation
+
+    /// Compute health for one account from the (newest-first) entries.
+    func health(for accountEmail: String) -> AccountHealth {
+        var consecutiveFailures = 0
+        for entry in entries where entry.accountEmail == accountEmail {
+            switch entry.status {
+            case .completed, .completedWithErrors:
+                return AccountHealth(lastSuccess: entry.endTime ?? entry.startTime,
+                                     consecutiveFailures: consecutiveFailures)
+            case .failed:
+                consecutiveFailures += 1
+            case .inProgress, .cancelled:
+                continue
+            }
+        }
+        return AccountHealth(lastSuccess: nil, consecutiveFailures: consecutiveFailures)
     }
 }

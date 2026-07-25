@@ -75,3 +75,14 @@ enum BackupHistoryStatus: String, Codable {
         }
     }
 }
+
+// MARK: - Derived Health
+
+/// Per-account backup health derived from history entries. Not persisted —
+/// always computed from BackupHistoryService.entries so it can never drift.
+struct AccountHealth: Equatable {
+    /// endTime (or startTime) of the most recent successful backup, if any.
+    var lastSuccess: Date?
+    /// Number of failed runs since the last success (cancelled/in-progress ignored).
+    var consecutiveFailures: Int
+}
