@@ -131,6 +131,17 @@ else
 fi
 echo
 
+# Informational: show signing identity of the canonical install
+if [ -d "$HOME/Applications/MailKeep.app" ]; then
+  authority=$(/usr/bin/codesign -dv "$HOME/Applications/MailKeep.app" 2>&1 | /usr/bin/grep '^Authority=' | /usr/bin/head -1)
+  if [ -n "$authority" ]; then
+    echo "Signing: $authority"
+  else
+    echo "Signing: ad-hoc (identity changes every rebuild — see docs/signing.md)"
+  fi
+fi
+echo
+
 if [ $problems -eq 0 ]; then
   green "OK — single canonical install, no drift detected."
   exit 0
