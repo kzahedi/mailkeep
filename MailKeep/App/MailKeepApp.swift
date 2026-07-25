@@ -5,12 +5,22 @@ struct MailKeepApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var backupManager: BackupManager
 
+    /// True when this process is an XCTest host (unit tests run hosted inside
+    /// the real app via TEST_HOST). Startup side effects must not run then:
+    /// app-hosted test runs must never mutate production data — the real
+    /// credential migration once executed during a unit-test run.
+    private static var isRunningTests: Bool {
+        NSClassFromString("XCTestCase") != nil
+    }
+
     init() {
         // Run migration synchronously before initializing BackupManager
         // This ensures old data is migrated before the app tries to load it
-        MigrationService.migrateIfNeeded()
-        MigrationService.migrateFileSystemIfNeeded()
-        MigrationService.migrateCredentialsIfNeeded()
+        if !Self.isRunningTests {
+            MigrationService.migrateIfNeeded()
+            MigrationService.migrateFileSystemIfNeeded()
+            MigrationService.migrateCredentialsIfNeeded()
+        }
 
         // Now initialize BackupManager with migrated data
         _backupManager = StateObject(wrappedValue: BackupManager())
