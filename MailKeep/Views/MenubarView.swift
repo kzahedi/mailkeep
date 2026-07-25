@@ -195,10 +195,15 @@ struct MenubarView: View {
 
 struct MenubarAccountRow: View {
     @EnvironmentObject var backupManager: BackupManager
+    @ObservedObject private var historyService = BackupHistoryService.shared
     let account: EmailAccount
 
     var progress: BackupProgress? {
         backupManager.progress[account.id]
+    }
+
+    var health: AccountHealth {
+        historyService.health(for: account.email)
     }
 
     var body: some View {
@@ -236,6 +241,12 @@ struct MenubarAccountRow: View {
                 Text("Last: \(lastBackup, style: .relative) ago")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+
+                if health.consecutiveFailures >= 2 {
+                    Text("\(health.consecutiveFailures) failures — check Settings → Accounts")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
             }
         }
         .padding(.vertical, 2)
@@ -249,12 +260,15 @@ struct MenubarAccountRow: View {
             case .completed: return .green
             case .failed: return .red
             case .cancelled: return .orange
-            case .idle: return .gray
-            default: return .blue
+            case .idle: break  // Fall through to health-based color
+            default: return .blue  // Running
             }
         }
 
-        return .gray
+        // Idle — use health-based color
+        if health.consecutiveFailures >= 2 { return .red }
+        if health.consecutiveFailures == 1 { return .orange }
+        return .green
     }
 }
 
