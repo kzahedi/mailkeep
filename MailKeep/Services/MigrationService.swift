@@ -279,4 +279,120 @@ enum MigrationService {
 
         return migratedCount
     }
+
+    // MARK: - Credential Migration (Keychain → file-backed CredentialStore)
+
+    private static let credentialsFileMigrationKey = "CredentialsFileMigrationCompleted"
+
+    /// One-time migration of IMAP passwords and OAuth tokens from the Keychain to the
+    /// file-backed CredentialStore. Runs synchronously at startup, before any other
+    /// CredentialStore access.
+    ///
+    /// Retry-safe: the completion flag is set ONLY when every Keychain read either
+    /// succeeded or was confirmed empty. A blocked read (errSecInteractionNotAllowed
+    /// at Login Item startup after a rebuild changed the code signature) leaves the
+    /// flag unset so the migration retries on the next launch — typically a manual
+    /// launch where the user can approve the Keychain prompt.
+    ///
+    /// Keychain items are intentionally left in place (rollback safety).
+    static func migrateCredentialsIfNeeded(
+        passwordService: String = "com.kzahedi.MailKeep",
+        oauthService: String = "com.kzahedi.MailKeep.oauth",
+        defaultsKey: String = credentialsFileMigrationKey
+    ) {
+        guard !UserDefaults.standard.bool(forKey: defaultsKey) else { return }
+
+        let (passwords, passwordsComplete) = readAllKeychainCredentials(service: passwordService)
+        let (tokens, tokensComplete) = readAllKeychainCredentials(service: oauthService)
+
+        if !passwords.isEmpty || !tokens.isEmpty {
+            do {
+                try CredentialStore.importIfAbsent(passwords: passwords, oauthTokens: tokens)
+                print("[Migration] Migrated \(passwords.count) password(s) and \(tokens.count) OAuth token(s) from Keychain to file store")
+            } catch {
+                print("[Migration] Failed to write credentials file: \(error) — will retry next launch")
+                return
+            }
+        }
+
+        if passwordsComplete && tokensComplete {
+            UserDefaults.standard.set(true, forKey: defaultsKey)
+            UserDefaults.standard.synchronize()
+            print("[Migration] Credential migration to file store completed")
+        } else {
+            print("[Migration] Keychain read was blocked — credential migration will retry next launch")
+        }
+    }
+
+    /// Read every generic-password item under `service` and flatten to
+    /// UUID-string → value. The consolidated "__credential_store__" JSON blob is
+    /// expanded and wins over legacy per-UUID items (it is the newer format).
+    ///
+    /// Uses two-step enumeration (list accounts, then fetch data individually) to work around
+    /// a macOS Keychain limitation: combining kSecReturnData with kSecMatchLimitAll on older
+    /// systems returns errSecParam. This approach is reliable across OS versions.
+    ///
+    /// Returns (credentials, complete) where:
+    /// - complete=true: enumeration succeeded; all readable items returned; unreachable items
+    ///   (errSecItemNotFound after enumeration) are skipped without marking incomplete.
+    /// - complete=false: enumeration or any item data fetch failed with a non-notfound error;
+    ///   returns whatever could be read safely, and caller must NOT set completion flag.
+    internal static func readAllKeychainCredentials(service: String) -> ([String: String], Bool) {
+        // Step A: Enumerate accounts without fetching data.
+        let listQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll
+        ]
+        var listResult: AnyObject?
+        let listStatus = SecItemCopyMatching(listQuery as CFDictionary, &listResult)
+
+        if listStatus == errSecItemNotFound { return ([:], true) }
+        guard listStatus == errSecSuccess, let items = listResult as? [[String: Any]] else {
+            print("[Migration] Keychain enumeration for \(service) failed with status \(listStatus)")
+            return ([:], false)
+        }
+
+        var perItem: [String: String] = [:]
+        var consolidated: [String: String] = [:]
+        var completeRead = true
+
+        // Step B: Fetch data for each account individually.
+        for item in items {
+            guard let account = item[kSecAttrAccount as String] as? String else { continue }
+
+            let itemQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
+            var itemResult: AnyObject?
+            let itemStatus = SecItemCopyMatching(itemQuery as CFDictionary, &itemResult)
+
+            if itemStatus == errSecItemNotFound {
+                // Item was deleted between enumeration and fetch; skip without marking incomplete.
+                continue
+            }
+
+            guard itemStatus == errSecSuccess, let data = itemResult as? Data else {
+                print("[Migration] Keychain fetch for \(service)/\(account) failed with status \(itemStatus)")
+                completeRead = false
+                continue
+            }
+
+            if account == "__credential_store__" {
+                if let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+                    consolidated = dict
+                }
+            } else if UUID(uuidString: account) != nil,
+                      let value = String(data: data, encoding: .utf8) {
+                perItem[account] = value
+            }
+        }
+
+        return (perItem.merging(consolidated) { _, consolidatedValue in consolidatedValue }, completeRead)
+    }
 }
