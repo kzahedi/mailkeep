@@ -99,6 +99,11 @@ extension BackupManager {
             updatedAccount.lastBackupDate = Date()
             updateAccount(updatedAccount)
 
+            // A successful backup proves the credential works — clear any
+            // stale probe flag so it can't keep re-appearing via
+            // checkForMissingPasswords().
+            probeFlaggedAccountIDs.remove(account.id)
+
             // Invalidate stats cache since backup added new emails
             invalidateStatsCache(for: account.id)
 

@@ -99,6 +99,21 @@ class NotificationService {
         return now.timeIntervalSince(lastSent) >= minInterval
     }
 
+    /// Shared per-account 24h dedupe gate used by both the repeated-failure
+    /// escalation and the credential-problem notification: at most one alert
+    /// per account per day, deliberately, so a broken account can't be missed
+    /// OR become noise. Returns false (and does nothing) if the gate is
+    /// still closed for `account`.
+    @discardableResult
+    private func recordNotificationIfDue(account: String, defaultsKey: String) -> Bool {
+        var sent = (UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: Double]) ?? [:]
+        let last = sent[account].map { Date(timeIntervalSince1970: $0) }
+        guard Self.shouldSendHealthNotification(lastSent: last) else { return false }
+        sent[account] = Date().timeIntervalSince1970
+        UserDefaults.standard.set(sent, forKey: defaultsKey)
+        return true
+    }
+
     /// Escalation for an account that keeps failing: unlike the per-run failure
     /// notification, this one names the streak and is rate-limited to one per
     /// account per 24 h so a broken account can't be missed OR become noise.
@@ -106,15 +121,33 @@ class NotificationService {
                                 consecutiveFailures: Int,
                                 lastError: String,
                                 defaultsKey: String = "HealthNotificationLastSent") {
-        var sent = (UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: Double]) ?? [:]
-        let last = sent[account].map { Date(timeIntervalSince1970: $0) }
-        guard Self.shouldSendHealthNotification(lastSent: last) else { return }
-        sent[account] = Date().timeIntervalSince1970
-        UserDefaults.standard.set(sent, forKey: defaultsKey)
+        guard recordNotificationIfDue(account: account, defaultsKey: defaultsKey) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Backups failing for \(account)"
         content.body = "\(consecutiveFailures) backups in a row have failed. Last error: \(lastError)"
+        content.sound = .default
+        content.categoryIdentifier = "BACKUP_ERROR"
+        let request = UNNotificationRequest(identifier: "backup-health-\(UUID().uuidString)",
+                                            content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Notification for the credential probe: the stored credential is
+    /// present but the server rejects it (dead password / revoked OAuth
+    /// grant). Distinct from `notifyRepeatedFailures` because zero *backups*
+    /// have necessarily failed yet — the probe found the problem first, so
+    /// the copy must not claim a backup failure streak that didn't happen.
+    /// Shares the same per-account 24h dedupe store deliberately: one
+    /// credential/failure alert per account per day.
+    func notifyCredentialProblem(account: String,
+                                  reason: String,
+                                  defaultsKey: String = "HealthNotificationLastSent") {
+        guard recordNotificationIfDue(account: account, defaultsKey: defaultsKey) else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Credential problem for \(account)"
+        content.body = "The stored password or Google authorization no longer works. Last error: \(reason)"
         content.sound = .default
         content.categoryIdentifier = "BACKUP_ERROR"
         let request = UNNotificationRequest(identifier: "backup-health-\(UUID().uuidString)",

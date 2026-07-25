@@ -4,6 +4,17 @@ extension BackupManager {
 
     static let lastProbeDateKey = "LastCredentialProbeDate"
 
+    /// Account IDs the probe has flagged as credential-dead. This survives
+    /// re-checks of `checkForMissingPasswords()` (restart, sheet save for
+    /// another account, etc.) which only scans for *presence* of a stored
+    /// credential and would otherwise silently erase probe findings for a
+    /// credential that is present but no longer accepted by the server.
+    static let probeFlaggedIDsKey = "ProbeFlaggedAccountIDs"
+    var probeFlaggedAccountIDs: Set<UUID> {
+        get { Set((UserDefaults.standard.stringArray(forKey: Self.probeFlaggedIDsKey) ?? []).compactMap(UUID.init)) }
+        set { UserDefaults.standard.set(newValue.map(\.uuidString), forKey: Self.probeFlaggedIDsKey) }
+    }
+
     /// Pure gate: probe at most once per 24 h.
     nonisolated static func probeIsDue(lastProbe: Date?, now: Date = Date()) -> Bool {
         guard let lastProbe else { return true }
@@ -36,14 +47,25 @@ extension BackupManager {
         logInfo("Running daily credential probe for \(accounts.count) account(s)")
         for account in accounts where account.isEnabled {
             let outcome = await CredentialProbeService.shared.probe(account)
-            if case .credentialFailure(let reason) = outcome {
+            switch outcome {
+            case .credentialFailure(let reason):
+                probeFlaggedAccountIDs.insert(account.id)
+
                 if !accountsWithMissingPasswords.contains(where: { $0.id == account.id }) {
                     accountsWithMissingPasswords.append(account)
                 }
-                NotificationService.shared.notifyRepeatedFailures(
-                    account: account.email, consecutiveFailures: 1,
-                    lastError: reason, defaultsKey: notificationDefaultsKey)
+                NotificationService.shared.notifyCredentialProblem(
+                    account: account.email, reason: reason,
+                    defaultsKey: notificationDefaultsKey)
+            case .ok:
+                probeFlaggedAccountIDs.remove(account.id)
+            case .transient:
+                break
             }
         }
+        // Recompute the presence-based list now that probe flags have settled,
+        // so a `.ok` outcome can actually clear an account that no longer has
+        // a live credential problem.
+        checkForMissingPasswords()
     }
 }

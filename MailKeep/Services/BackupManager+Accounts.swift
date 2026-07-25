@@ -34,6 +34,17 @@ extension BackupManager {
                 }
             }
             await MainActor.run {
+                // Union in accounts the credential probe flagged as
+                // credential-dead (present-but-rejected-by-server). A
+                // presence-only rescan must never silently erase those
+                // findings — see BackupManager+CredentialProbe.swift.
+                let flaggedIDs = self.probeFlaggedAccountIDs
+                if !flaggedIDs.isEmpty {
+                    let missingIDs = Set(missing.map(\.id))
+                    for account in self.accounts where flaggedIDs.contains(account.id) && !missingIDs.contains(account.id) {
+                        missing.append(account)
+                    }
+                }
                 self.accountsWithMissingPasswords = missing
             }
         }

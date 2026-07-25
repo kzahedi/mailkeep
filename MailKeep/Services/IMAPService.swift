@@ -337,6 +337,13 @@ actor IMAPService {
             trace("[DEBUG] Getting access token...")
             accessToken = try await account.getValidAccessToken()
             trace("[DEBUG] Got access token (length: \(accessToken.count))")
+        } catch let error as URLError {
+            // Network failures from the token-refresh HTTP call are transient,
+            // not a credential problem — don't misclassify a timeout/offline
+            // condition as "re-authorize your account".
+            trace("[DEBUG] Token refresh network error: \(error.localizedDescription)")
+            logError("Token refresh network error: \(error.localizedDescription)")
+            throw IMAPError.connectionFailed("Token refresh network error: \(error.localizedDescription)")
         } catch {
             trace("[DEBUG] Failed to get OAuth access token: \(error.localizedDescription)")
             logError("Failed to get OAuth access token: \(error.localizedDescription)")

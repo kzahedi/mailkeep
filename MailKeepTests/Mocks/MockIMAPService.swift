@@ -28,6 +28,10 @@ actor MockIMAPService: IMAPServiceProtocol {
 
     var shouldFailConnect = false
     var shouldFailLogin = false
+    /// Injected error to throw from login(), honored before shouldFailLogin.
+    /// Lets tests simulate errors other than plain authenticationFailed
+    /// (e.g. a transient URLError from an OAuth token-refresh call).
+    var loginError: Error?
     var shouldFailOnUID: UInt32? = nil
     var connectionDelay: TimeInterval = 0
     var fetchDelay: TimeInterval = 0
@@ -81,6 +85,7 @@ actor MockIMAPService: IMAPServiceProtocol {
         fetchEmailCalls = []
         shouldFailConnect = false
         shouldFailLogin = false
+        loginError = nil
         shouldFailOnUID = nil
     }
 
@@ -111,6 +116,10 @@ actor MockIMAPService: IMAPServiceProtocol {
 
         guard isConnected else {
             throw IMAPError.notConnected
+        }
+
+        if let loginError {
+            throw loginError
         }
 
         if shouldFailLogin {
@@ -269,6 +278,10 @@ actor MockIMAPService: IMAPServiceProtocol {
 
     func setShouldFailLogin(_ value: Bool) {
         shouldFailLogin = value
+    }
+
+    func setLoginError(_ value: Error?) {
+        loginError = value
     }
 
     // MARK: - Helper
