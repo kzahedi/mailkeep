@@ -127,7 +127,7 @@ struct MissingPasswordsView: View {
                 }
 
                 do {
-                    try await KeychainService.shared.savePassword(password, for: account.id)
+                    try await CredentialStore.shared.savePassword(password, for: account.id)
                 } catch {
                     await MainActor.run {
                         errorMessage = "Failed to save password for \(account.email): \(error.localizedDescription)"

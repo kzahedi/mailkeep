@@ -10,6 +10,7 @@ struct MailKeepApp: App {
         // This ensures old data is migrated before the app tries to load it
         MigrationService.migrateIfNeeded()
         MigrationService.migrateFileSystemIfNeeded()
+        MigrationService.migrateCredentialsIfNeeded()
 
         // Now initialize BackupManager with migrated data
         _backupManager = StateObject(wrappedValue: BackupManager())

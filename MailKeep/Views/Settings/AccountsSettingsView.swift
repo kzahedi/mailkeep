@@ -299,8 +299,8 @@ struct EditAccountView: View {
                 let testPassword: String
                 if !password.isEmpty {
                     testPassword = password
-                } else if let keychainPassword = try? await KeychainService.shared.getPassword(for: account.id) {
-                    testPassword = keychainPassword
+                } else if let storedPassword = try? await CredentialStore.shared.getPassword(for: account.id) {
+                    testPassword = storedPassword
                 } else {
                     await MainActor.run {
                         testResult = .failure("No password provided. Please enter the password.")
@@ -327,7 +327,7 @@ struct EditAccountView: View {
                 // Save password to Keychain on successful test
                 if !password.isEmpty {
                     do {
-                        try await KeychainService.shared.savePassword(password, for: account.id)
+                        try await CredentialStore.shared.savePassword(password, for: account.id)
                     } catch {
                         logError("Failed to save password to Keychain: \(error.localizedDescription)")
                     }
