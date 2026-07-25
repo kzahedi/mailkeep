@@ -202,15 +202,13 @@ struct MenubarAccountRow: View {
         backupManager.progress[account.id]
     }
 
-    var health: AccountHealth {
-        historyService.health(for: account.email)
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let health = historyService.health(for: account.email)
+
+        return VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Circle()
-                    .fill(statusColor)
+                    .fill(statusColor(health: health))
                     .frame(width: 6, height: 6)
 
                 Text(account.email)
@@ -252,7 +250,7 @@ struct MenubarAccountRow: View {
         .padding(.vertical, 2)
     }
 
-    var statusColor: Color {
+    func statusColor(health: AccountHealth) -> Color {
         guard account.isEnabled else { return .gray }
 
         if let status = progress?.status {
