@@ -148,7 +148,7 @@ echo
 
 # Informational: show signing identity of the canonical install
 if [ -d "$HOME/Applications/MailKeep.app" ]; then
-  authority=$(/usr/bin/codesign -dv "$HOME/Applications/MailKeep.app" 2>&1 | /usr/bin/grep '^Authority=' | /usr/bin/head -1)
+  authority=$(/usr/bin/codesign -dvv "$HOME/Applications/MailKeep.app" 2>&1 | /usr/bin/grep '^Authority=' | /usr/bin/head -1)
   if [ -n "$authority" ]; then
     echo "Signing: $authority"
   else
