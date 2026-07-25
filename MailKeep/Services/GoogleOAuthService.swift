@@ -116,7 +116,25 @@ final class GoogleOAuthService: NSObject {
         // Exchange code for tokens
         let tokens = try await exchangeCodeForTokens(code: authCode, config: config)
 
+        // Refuse tokens that can't do IMAP: without the mail scope, Gmail rejects
+        // every XOAUTH2 login and the stored token is worse than useless.
+        try Self.validateMailScope(tokens.scope)
+
         return tokens
+    }
+
+    /// The scope Gmail IMAP requires. Google only grants it when the user ticks
+    /// the mail-access checkbox on the consent screen — it is not implied by the
+    /// request. A grant without it produces tokens that pass every OAuth step
+    /// and then fail at IMAP login with "Invalid OAuth request (status 400)".
+    nonisolated static let requiredMailScope = "https://mail.google.com/"
+
+    /// Throw unless the granted scope string includes the Gmail IMAP scope.
+    nonisolated static func validateMailScope(_ grantedScope: String) throws {
+        let scopes = grantedScope.split(separator: " ").map(String.init)
+        guard scopes.contains(requiredMailScope) else {
+            throw GoogleOAuthError.insufficientScope(grantedScope)
+        }
     }
 
     /// Refresh an expired access token
@@ -392,6 +410,7 @@ enum GoogleOAuthError: LocalizedError {
     case tokenRefreshFailed(String)
     case noRefreshToken
     case userInfoFailed
+    case insufficientScope(String)
 
     var errorDescription: String? {
         switch self {
@@ -419,6 +438,8 @@ enum GoogleOAuthError: LocalizedError {
             return "No refresh token received. Please try signing in again."
         case .userInfoFailed:
             return "Failed to get user information from Google."
+        case .insufficientScope(let granted):
+            return "Google did not grant Gmail access (granted: \(granted)). Re-authorize and tick the \"Read, compose, send and permanently delete all your email from Gmail\" checkbox on Google's consent screen."
         }
     }
 }
