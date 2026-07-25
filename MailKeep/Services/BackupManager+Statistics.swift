@@ -139,17 +139,23 @@ extension BackupManager {
         return stats
     }
 
-    private nonisolated static func parseDateFromFilename(_ filename: String) -> Date? {
-        // Format: YYYYMMDD_HHMMSS_sender
-        let parts = filename.components(separatedBy: "_")
-        guard parts.count >= 2,
-              parts[0].count == 8,
-              parts[1].count == 6 else {
-            return nil
+    /// Filenames are "<UID>_<yyyyMMdd>_<HHmmss>_<sender>[ _N].eml".
+    /// Find the first component that is an 8-digit date and pair it with the
+    /// following 6-digit time — robust to the numeric UID prefix (which the
+    /// previous implementation mistook for the date, leaving stats dateless).
+    internal nonisolated static func parseDateFromFilename(_ filename: String) -> Date? {
+        let base = (filename as NSString).deletingPathExtension
+        let parts = base.split(separator: "_").map(String.init)
+        for index in parts.indices.dropLast() {
+            let candidate = parts[index], time = parts[index + 1]
+            if candidate.count == 8, candidate.allSatisfy(\.isNumber),
+               time.count == 6, time.allSatisfy(\.isNumber) {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyyMMdd_HHmmss"
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+                return formatter.date(from: "\(candidate)_\(time)")
+            }
         }
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
-        return dateFormatter.date(from: "\(parts[0])_\(parts[1])")
+        return nil
     }
 }

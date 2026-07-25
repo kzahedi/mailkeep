@@ -6,6 +6,7 @@ struct AccountsSettingsView: View {
     @State private var accountToEdit: EmailAccount?
     @State private var accountToDelete: EmailAccount?
     @State private var showingDeleteConfirmation = false
+    @State private var stats: [UUID: BackupManager.AccountStats] = [:]
 
     var body: some View {
         VStack {
@@ -28,6 +29,11 @@ struct AccountsSettingsView: View {
                             Text(account.imapServer)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            if let s = stats[account.id] {
+                                Text("\(s.totalEmails) emails · \(ByteCountFormatter.string(fromByteCount: s.totalSize, countStyle: .file))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
 
                         Spacer()
@@ -62,6 +68,9 @@ struct AccountsSettingsView: View {
                         .help("Enable/disable backup")
                     }
                     .padding(.vertical, 4)
+                    .task(id: account.id) {
+                        stats[account.id] = await backupManager.getStats(for: account)
+                    }
                 }
             }
 
