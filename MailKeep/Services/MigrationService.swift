@@ -386,6 +386,8 @@ enum MigrationService {
             if account == "__credential_store__" {
                 if let dict = try? JSONDecoder().decode([String: String].self, from: data) {
                     consolidated = dict
+                } else {
+                    print("[Migration] consolidated store for \(service) is undecodable — skipping it (item left in Keychain)")
                 }
             } else if UUID(uuidString: account) != nil,
                       let value = String(data: data, encoding: .utf8) {

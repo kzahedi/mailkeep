@@ -329,7 +329,7 @@ struct EditAccountView: View {
                     do {
                         try await CredentialStore.shared.savePassword(password, for: account.id)
                     } catch {
-                        logError("Failed to save password to Keychain: \(error.localizedDescription)")
+                        logError("Failed to save password: \(error.localizedDescription)")
                     }
                 }
 

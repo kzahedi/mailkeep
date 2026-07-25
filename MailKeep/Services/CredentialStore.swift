@@ -63,7 +63,24 @@ actor CredentialStore {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         let data = try JSONEncoder().encode(contents)
-        try data.write(to: url, options: .atomic)
+        // Write to a private temp file (0600 from creation), then atomically swap in —
+        // the credentials file is never observable with wider permissions.
+        let tempURL = url.deletingLastPathComponent()
+            .appendingPathComponent(".credentials.json.tmp-\(UUID().uuidString)")
+        FileManager.default.createFile(
+            atPath: tempURL.path, contents: nil,
+            attributes: [.posixPermissions: 0o600])
+        do {
+            let handle = try FileHandle(forWritingTo: tempURL)
+            try handle.write(contentsOf: data)
+            try handle.close()
+            _ = try FileManager.default.replaceItemAt(url, withItemAt: tempURL)
+        } catch {
+            try? FileManager.default.removeItem(at: tempURL)
+            throw error
+        }
+        // replaceItemAt preserves the destination's existing permissions in some cases;
+        // enforce 0600 on the final path as a belt-and-braces invariant.
         try FileManager.default.setAttributes(
             [.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
