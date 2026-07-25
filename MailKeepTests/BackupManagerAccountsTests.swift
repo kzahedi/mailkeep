@@ -5,8 +5,9 @@ import XCTest
 ///
 /// Accounts are stored as a JSON file in Application Support.
 /// Tests redirect both the accounts file (via testAccountsFileOverride) and the
-/// Keychain account-list (via testServiceOverride) to isolated namespaces so no
-/// production data is read, written, or deleted during test runs.
+/// Keychain account-list (via testServiceOverride) to isolated, unique-per-run namespaces
+/// so no production data is read, written, or deleted during test runs, and so that a
+/// differently-signed test runner can never touch another run's items (preventing keychain prompts).
 @MainActor
 final class BackupManagerAccountsTests: XCTestCase {
 
@@ -23,7 +24,7 @@ final class BackupManagerAccountsTests: XCTestCase {
         BackupManager.testAccountsFileOverride = tempDir.appendingPathComponent("accounts.json")
 
         // Isolated Keychain namespace for migration tests
-        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.uitesting"
+        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.test-\(UUID().uuidString)"
         try? KeychainService.shared.deleteAccountList()
 
         // Isolated CredentialStore file for credential tests

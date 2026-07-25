@@ -12,10 +12,13 @@ final class MissingCredentialsTests: XCTestCase {
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         CredentialStore.testFileOverride = tempDir.appendingPathComponent("credentials.json")
         BackupManager.testAccountsFileOverride = tempDir.appendingPathComponent("accounts.json")
+        KeychainService.testServiceOverride = "com.kzahedi.MailKeep.accounts.test-\(UUID().uuidString)"
         backupManager = BackupManager()
     }
 
     override func tearDown() async throws {
+        try? KeychainService.shared.deleteAccountList()
+        KeychainService.testServiceOverride = nil
         CredentialStore.testFileOverride = nil
         BackupManager.testAccountsFileOverride = nil
         try? FileManager.default.removeItem(at: tempDir)
