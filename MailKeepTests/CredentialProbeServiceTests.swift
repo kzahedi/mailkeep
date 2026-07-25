@@ -70,9 +70,15 @@ final class CredentialProbeServiceTests: XCTestCase {
         XCTAssertTrue(BackupManager.probeIsDue(lastProbe: now.addingTimeInterval(-90_000), now: now))
     }
 
-    func testCredentialFailureLandsInMissingCredentialsList() async {
+    func testCredentialFailureLandsInMissingCredentialsList() async throws {
         let manager = BackupManager()
         let broken = EmailAccount(email: "dead@example.com", imapServer: "imap.example.com")
+        // BackupManager.init fires an async checkForMissingPasswords() scan
+        // (fire-and-forget Task) that would otherwise race this test: without
+        // a stored password it flags `broken` as missing on its own, making
+        // the assertion pass/fail by scheduling luck rather than the probe.
+        // Storing a password up front keeps that background scan a no-op.
+        try await CredentialStore.shared.savePassword("test-pw", for: broken.id)
         manager.accounts = [broken]
         let mock = MockIMAPService()
         await mock.setShouldFailLogin(true)
@@ -86,9 +92,15 @@ final class CredentialProbeServiceTests: XCTestCase {
         XCTAssertEqual(manager.accountsWithMissingPasswords.map(\.email), ["dead@example.com"])
     }
 
-    func testTransientFailureDoesNotFlagAccount() async {
+    func testTransientFailureDoesNotFlagAccount() async throws {
         let manager = BackupManager()
         let flaky = EmailAccount(email: "flaky@example.com", imapServer: "imap.example.com")
+        // Same race as above: BackupManager.init's background
+        // checkForMissingPasswords() must not independently flag `flaky` for
+        // having no stored password, or it would land in
+        // accountsWithMissingPasswords regardless of the probe outcome this
+        // test is actually checking, making the assertion nondeterministic.
+        try await CredentialStore.shared.savePassword("test-pw", for: flaky.id)
         manager.accounts = [flaky]
         let mock = MockIMAPService()
         await mock.setShouldFailConnect(true)
