@@ -124,9 +124,25 @@ fi
 echo
 
 # --- 7. Refresh Launch Services registration ---
+# Unregister EVERY path LS knows for the bundle ID except the canonical one —
+# including this script's own temp build (xcodebuild registers it during step 2)
+# and phantom entries whose bundles are already gone from disk. mdfind (step 6)
+# can't be trusted for this: Spotlight indexing lags behind fresh builds.
 blue "[7/8] Refreshing Launch Services registration…"
+"$LSREG" -u "$NEW_APP" >/dev/null 2>&1 || true
+while IFS= read -r reg_path; do
+  [ -z "$reg_path" ] && continue
+  [ "$reg_path" = "$CANONICAL" ] && continue
+  "$LSREG" -u "$reg_path" >/dev/null 2>&1 || true
+  echo "      - unregistered $reg_path"
+done < <("$LSREG" -dump 2>/dev/null | /usr/bin/awk -v id="$BUNDLE_ID" '
+  /^----/             { path=""; ident=""; next }
+  /^path:/            { sub(/^path:[[:space:]]+/, ""); sub(/ \(0x[0-9a-f]+\)$/, ""); path=$0 }
+  /^identifier:/      { sub(/^identifier:[[:space:]]+/, ""); ident=$0 }
+  ident==id && path!=""  { print path; path=""; ident="" }
+' | /usr/bin/sort -u)
 "$LSREG" -f "$CANONICAL" >/dev/null 2>&1
-green "  ✓ registered $CANONICAL"
+green "  ✓ registered $CANONICAL (all other registrations purged)"
 echo
 
 # --- 8. Re-point the Login Item ---

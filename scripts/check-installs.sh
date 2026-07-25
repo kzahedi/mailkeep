@@ -41,17 +41,32 @@ echo "Checking MailKeep install state…"
 echo
 
 # 1. mdfind: how many MailKeep.app bundles with this ID exist on disk?
+# Spotlight lags behind fresh copies (a just-installed canonical bundle may not
+# be indexed yet, and just-deleted temp builds may still be listed), so:
+#  - drop mdfind hits that no longer exist on disk
+#  - add the canonical path if it exists but isn't indexed yet
 echo "[1/5] MailKeep.app bundles on disk (mdfind):"
 mdfind_out=$(/usr/bin/mdfind "kMDItemCFBundleIdentifier == $BUNDLE_ID" 2>/dev/null)
-if [ -z "$mdfind_out" ]; then
+bundles=""
+while IFS= read -r p; do
+  [ -z "$p" ] && continue
+  [ -d "$p" ] || continue   # stale index entry, bundle already gone
+  bundles="${bundles}${p}"$'\n'
+done <<< "$mdfind_out"
+if [ -d "$CANONICAL" ] && ! printf '%s' "$bundles" | /usr/bin/grep -Fx -q -- "$CANONICAL"; then
+  bundles="${bundles}${CANONICAL}"$'\n'
+  yellow "  (canonical bundle not yet in Spotlight index — counted from disk)"
+fi
+bundles=$(printf '%s' "$bundles" | /usr/bin/sort -u)
+if [ -z "$bundles" ]; then
   report_problem "no MailKeep.app found anywhere — expected one at $CANONICAL"
 else
-  count=$(printf '%s\n' "$mdfind_out" | /usr/bin/wc -l | /usr/bin/tr -d ' ')
-  if [ "$count" -eq 1 ] && [ "$mdfind_out" = "$CANONICAL" ]; then
-    report_ok "exactly one: $mdfind_out"
+  count=$(printf '%s\n' "$bundles" | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+  if [ "$count" -eq 1 ] && [ "$bundles" = "$CANONICAL" ]; then
+    report_ok "exactly one: $bundles"
   else
     report_problem "$count bundle(s) found, expected only $CANONICAL:"
-    printf '%s\n' "$mdfind_out" | /usr/bin/sed 's/^/      - /'
+    printf '%s\n' "$bundles" | /usr/bin/sed 's/^/      - /'
   fi
 fi
 echo
