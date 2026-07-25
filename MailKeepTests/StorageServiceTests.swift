@@ -377,4 +377,59 @@ final class StorageServiceTests: XCTestCase {
         let count = try await storageService.getEmailCount(for: "test@example.com")
         XCTAssertEqual(count, 50)
     }
+
+    // MARK: - Email Enumeration Tests
+
+    func testListEmailFilesReturnsAllEmlRecursively() async throws {
+        let email = Email(
+            messageId: "<m1>",
+            uid: 1,
+            folder: "INBOX",
+            subject: "Hi",
+            sender: "Alice",
+            senderEmail: "alice@example.com",
+            date: Date()
+        )
+        _ = try await storageService.saveEmail(Data("mail one".utf8), email: email,
+                                               accountEmail: "list@example.com", folderPath: "INBOX")
+        let email2 = Email(
+            messageId: "<m2>",
+            uid: 2,
+            folder: "Work/Projects",
+            subject: "Yo",
+            sender: "Bob",
+            senderEmail: "bob@example.com",
+            date: Date()
+        )
+        _ = try await storageService.saveEmail(Data("mail two".utf8), email: email2,
+                                               accountEmail: "list@example.com", folderPath: "Work/Projects")
+        let files = try await storageService.listEmailFiles(accountEmail: "list@example.com")
+        XCTAssertEqual(files.count, 2)
+        XCTAssertTrue(files.allSatisfy { $0.pathExtension == "eml" })
+        XCTAssertEqual(files, files.sorted { $0.path < $1.path })
+    }
+
+    func testListEmailFilesSkipsSidecarsAndTmp() async throws {
+        let email = Email(
+            messageId: "<m3>",
+            uid: 3,
+            folder: "INBOX",
+            subject: "S",
+            sender: "C",
+            senderEmail: "c@example.com",
+            date: Date()
+        )
+        let saved = try await storageService.saveEmail(Data("mail".utf8), email: email,
+                                                       accountEmail: "list2@example.com", folderPath: "INBOX")
+        let dir = saved.deletingLastPathComponent()
+        try Data("junk".utf8).write(to: dir.appendingPathComponent("leftover.tmp"))
+        // .uid_cache already exists from saveEmail
+        let files = try await storageService.listEmailFiles(accountEmail: "list2@example.com")
+        XCTAssertEqual(files.count, 1)
+    }
+
+    func testListEmailFilesForUnknownAccountIsEmpty() async throws {
+        let files = try await storageService.listEmailFiles(accountEmail: "ghost@example.com")
+        XCTAssertTrue(files.isEmpty)
+    }
 }

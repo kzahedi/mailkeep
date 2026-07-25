@@ -529,6 +529,22 @@ actor StorageService {
         return try countFiles(at: accountURL, withExtension: "eml")
     }
 
+    /// All stored .eml files for an account, recursive, deterministic order.
+    /// Hidden sidecars (.uid_cache/.hash_index) and in-flight *.tmp are excluded.
+    /// Missing account directory → empty array (a new account has no backups yet).
+    func listEmailFiles(accountEmail: String) throws -> [URL] {
+        let accountDir = baseURL.appendingPathComponent(accountEmail.sanitizedForFilename())
+        guard FileManager.default.fileExists(atPath: accountDir.path) else { return [] }
+        guard let enumerator = FileManager.default.enumerator(
+            at: accountDir, includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]) else { return [] }
+        var result: [URL] = []
+        for case let url as URL in enumerator where url.pathExtension == "eml" {
+            result.append(url)
+        }
+        return result.sorted { $0.path < $1.path }
+    }
+
     // MARK: - Helpers
 
     private func uniqueFileURL(for url: URL) -> URL {
