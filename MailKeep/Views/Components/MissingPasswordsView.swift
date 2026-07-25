@@ -168,6 +168,11 @@ struct MissingPasswordsView: View {
             do {
                 let tokens = try await GoogleOAuthService.shared.authorize()
                 try await account.saveOAuthTokens(tokens)
+            } catch GoogleOAuthError.userCancelled {
+                await MainActor.run {
+                    savingAccount = nil
+                }
+                return
             } catch {
                 await MainActor.run {
                     errorMessage = "Re-authorization failed for \(account.email): \(error.localizedDescription)"
