@@ -89,6 +89,39 @@ class NotificationService {
         UNUserNotificationCenter.current().add(request)
     }
 
+    // MARK: - Repeated-Failure Escalation
+
+    /// Pure gate: at most one health notification per account per minInterval.
+    static func shouldSendHealthNotification(lastSent: Date?,
+                                             now: Date = Date(),
+                                             minInterval: TimeInterval = 86_400) -> Bool {
+        guard let lastSent else { return true }
+        return now.timeIntervalSince(lastSent) >= minInterval
+    }
+
+    /// Escalation for an account that keeps failing: unlike the per-run failure
+    /// notification, this one names the streak and is rate-limited to one per
+    /// account per 24 h so a broken account can't be missed OR become noise.
+    func notifyRepeatedFailures(account: String,
+                                consecutiveFailures: Int,
+                                lastError: String,
+                                defaultsKey: String = "HealthNotificationLastSent") {
+        var sent = (UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: Double]) ?? [:]
+        let last = sent[account].map { Date(timeIntervalSince1970: $0) }
+        guard Self.shouldSendHealthNotification(lastSent: last) else { return }
+        sent[account] = Date().timeIntervalSince1970
+        UserDefaults.standard.set(sent, forKey: defaultsKey)
+
+        let content = UNMutableNotificationContent()
+        content.title = "Backups failing for \(account)"
+        content.body = "\(consecutiveFailures) backups in a row have failed. Last error: \(lastError)"
+        content.sound = .default
+        content.categoryIdentifier = "BACKUP_ERROR"
+        let request = UNNotificationRequest(identifier: "backup-health-\(UUID().uuidString)",
+                                            content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
     // MARK: - Notification Categories (for actions)
 
     func setupNotificationCategories() {

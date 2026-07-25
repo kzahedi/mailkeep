@@ -59,4 +59,33 @@ final class BackupHealthTests: XCTestCase {
         XCTAssertEqual(service.health(for: "a@example.com").consecutiveFailures, 1)
         XCTAssertEqual(service.health(for: "b@example.com").consecutiveFailures, 0)
     }
+
+    // MARK: - Health Notification Gate Tests
+
+    func testHealthNotificationGateAllowsFirstSend() {
+        XCTAssertTrue(NotificationService.shouldSendHealthNotification(
+            lastSent: nil, now: Date(), minInterval: 86_400))
+    }
+
+    func testHealthNotificationGateBlocksWithin24h() {
+        let now = Date()
+        XCTAssertFalse(NotificationService.shouldSendHealthNotification(
+            lastSent: now.addingTimeInterval(-3_600), now: now, minInterval: 86_400))
+    }
+
+    func testHealthNotificationGateAllowsAfter24h() {
+        let now = Date()
+        XCTAssertTrue(NotificationService.shouldSendHealthNotification(
+            lastSent: now.addingTimeInterval(-90_000), now: now, minInterval: 86_400))
+    }
+
+    func testNotifyRepeatedFailuresRecordsSendTime() {
+        let key = "TestHealthNotify-\(UUID().uuidString)"
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+        NotificationService.shared.notifyRepeatedFailures(
+            account: "a@example.com", consecutiveFailures: 2, lastError: "auth failed",
+            defaultsKey: key)
+        let dict = UserDefaults.standard.dictionary(forKey: key) as? [String: Double]
+        XCTAssertNotNil(dict?["a@example.com"])
+    }
 }

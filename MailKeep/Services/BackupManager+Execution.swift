@@ -144,6 +144,15 @@ extension BackupManager {
             BackupHistoryService.shared.updateEntry(id: historyId, error: error.localizedDescription)
             BackupHistoryService.shared.completeEntry(id: historyId, status: .failed)
 
+            // Escalate if account has consecutive failures
+            let health = BackupHistoryService.shared.health(for: account.email)
+            if health.consecutiveFailures >= 2 {
+                NotificationService.shared.notifyRepeatedFailures(
+                    account: account.email,
+                    consecutiveFailures: health.consecutiveFailures,
+                    lastError: error.localizedDescription)
+            }
+
             // Send failure notification
             NotificationService.shared.notifyBackupFailed(
                 account: account.email,
