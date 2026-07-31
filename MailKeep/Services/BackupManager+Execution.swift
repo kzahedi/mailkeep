@@ -107,7 +107,9 @@ extension BackupManager {
             // Invalidate stats cache since backup added new emails
             invalidateStatsCache(for: account.id)
 
-            try await imapService.logout()
+            // Best-effort: all data is already saved; a logout failure (server
+            // closing the socket after BYE) must not mark a green backup failed.
+            try? await imapService.logout()
 
             // Update and complete history entry
             if let finalProgress = progress[account.id] {
