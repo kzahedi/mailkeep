@@ -80,6 +80,7 @@
 		C10000010000000000000011 /* BackupHealthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000011 /* BackupHealthTests.swift */; };
 		C10000010000000000000014 /* StatisticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000014 /* StatisticsTests.swift */; };
 		C10000010000000000000015 /* MboxExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000015 /* MboxExportServiceTests.swift */; };
+		C10000010000000000000016 /* IMAPTimeoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000020000000000000016 /* IMAPTimeoutTests.swift */; };
 			D10000010000000000000001 /* IMAPBackupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000001 /* IMAPBackupUITests.swift */; };
 		D10000010000000000000002 /* IMAPBackupUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000020000000000000002 /* IMAPBackupUITestsLaunchTests.swift */; };
 		B10000010000000000000030 /* OAuthSecrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000020000000000000030 /* OAuthSecrets.swift */; };
@@ -188,6 +189,7 @@
 		C10000020000000000000011 /* BackupHealthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupHealthTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000014 /* StatisticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsTests.swift; sourceTree = "<group>"; };
 		C10000020000000000000015 /* MboxExportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MboxExportServiceTests.swift; sourceTree = "<group>"; };
+		C10000020000000000000016 /* IMAPTimeoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAPTimeoutTests.swift; sourceTree = "<group>"; };
 			C10000030000000000000002 /* IMAPBackupTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailKeepTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D10000020000000000000001 /* IMAPBackupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailKeepUITests.swift; sourceTree = "<group>"; };
 		D10000020000000000000002 /* IMAPBackupUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailKeepUITestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -409,6 +411,7 @@
 				C10000020000000000000011 /* BackupHealthTests.swift */,
 				C10000020000000000000014 /* StatisticsTests.swift */,
 				C10000020000000000000015 /* MboxExportServiceTests.swift */,
+				C10000020000000000000016 /* IMAPTimeoutTests.swift */,
 				C10000020000000000000012 /* CredentialProbeServiceTests.swift */,
 				C10000020000000000000013 /* MockIMAPService.swift */,
 				E100000200000004 /* IMAPServiceIDLETests.swift */,
@@ -646,6 +649,7 @@
 				C10000010000000000000011 /* BackupHealthTests.swift in Sources */,
 				C10000010000000000000014 /* StatisticsTests.swift in Sources */,
 				C10000010000000000000015 /* MboxExportServiceTests.swift in Sources */,
+				C10000010000000000000016 /* IMAPTimeoutTests.swift in Sources */,
 				E100000100000004 /* IMAPServiceIDLETests.swift in Sources */,
 				E100000100000005 /* IDLEManagerTests.swift in Sources */,
 				E100000100000006 /* BackupManagerIDLETests.swift in Sources */,

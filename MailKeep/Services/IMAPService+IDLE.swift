@@ -53,7 +53,13 @@ extension IMAPService {
             group.addTask { [self] in
                 try await withTaskCancellationHandler {
                     while true {
-                        let chunk = try await readResponse()
+                        // IDLE deliberately sits quiet for up to `timeout` (RFC 2177
+                        // recommends ~25 min re-IDLE) waiting for a server push, so the
+                        // per-read watchdog must not fire before the keepalive task below
+                        // does — pass `timeout` itself (plus slack) rather than the
+                        // short default. A genuinely dead connection is still bounded by
+                        // the keepalive task's disconnect() in `onCancel`.
+                        let chunk = try await readResponse(timeout: timeout + 30)
                         if let count = parseExistsCount(from: chunk) {
                             // New mail — send DONE and return result
                             try await sendDone(idleTag: idleTag)

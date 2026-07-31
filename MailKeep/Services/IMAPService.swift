@@ -77,11 +77,13 @@ actor IMAPService {
     private let maxReconnectAttempts = 3
 
     private let account: EmailAccount
+    private let connectTimeout: TimeInterval
     private var throttleTracker: ThrottleTracker?
     private var rateLimitSettings: RateLimitSettings
 
-    init(account: EmailAccount) {
+    init(account: EmailAccount, connectTimeout: TimeInterval = Constants.imapConnectTimeoutSeconds) {
         self.account = account
+        self.connectTimeout = connectTimeout
         self.rateLimitSettings = RateLimitSettings.default
     }
 
@@ -200,6 +202,24 @@ actor IMAPService {
                nsError.code == -1001    // Request timed out
     }
 
+    // MARK: - Connection Watchdog
+
+    /// Cancels the connection if `seconds` elapse before the caller cancels the
+    /// watchdog. Cancelling the NWConnection forces any pending receive/send
+    /// callback to fire with an error, so the awaiting continuation resumes and
+    /// the normal failure path takes over — a dead connection can never hang a
+    /// backup task again. (Tiny race: the watchdog may cancel a connection whose
+    /// read JUST completed; the next operation then fails and the existing
+    /// recovery/reconnect handles it.)
+    private func startConnectionWatchdog(seconds: TimeInterval) -> Task<Void, Never> {
+        Task { [weak connection] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            trace("connection watchdog fired after \(seconds)s — cancelling connection")
+            connection?.cancel()
+        }
+    }
+
     // MARK: - Connection Management
 
     func connect() async throws {
@@ -227,6 +247,9 @@ actor IMAPService {
         let state = ContinuationState()
 
         logInfo("Connecting to \(account.imapServer):\(account.port)...")
+
+        let watchdog = startConnectionWatchdog(seconds: connectTimeout)
+        defer { watchdog.cancel() }
 
         return try await withCheckedThrowingContinuation { continuation in
             connection?.stateUpdateHandler = { [weak self] connectionState in
@@ -477,17 +500,21 @@ actor IMAPService {
 
         while true {
             trace("fetchEmailWithLiteralParsing: reading chunk...")
-            let chunk: Data = try await withCheckedThrowingContinuation { continuation in
-                connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
-                    if let error = error {
-                        continuation.resume(throwing: IMAPError.receiveFailed(error.localizedDescription))
-                    } else if let data = data, !data.isEmpty {
-                        continuation.resume(returning: data)
-                    } else {
-                        continuation.resume(throwing: IMAPError.receiveFailed("No data received"))
+            let chunk: Data = try await {
+                let watchdog = startConnectionWatchdog(seconds: Constants.imapReadTimeoutSeconds)
+                defer { watchdog.cancel() }
+                return try await withCheckedThrowingContinuation { continuation in
+                    connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
+                        if let error = error {
+                            continuation.resume(throwing: IMAPError.receiveFailed(error.localizedDescription))
+                        } else if let data = data, !data.isEmpty {
+                            continuation.resume(returning: data)
+                        } else {
+                            continuation.resume(throwing: IMAPError.receiveFailed("No data received"))
+                        }
                     }
                 }
-            }
+            }()
             trace("fetchEmailWithLiteralParsing: got \(chunk.count) bytes")
 
             allData.append(chunk)
@@ -692,17 +719,21 @@ actor IMAPService {
         // Phase 2: Raw Data receive loop — reads bytes directly from NWConnection without
         // any String conversion, so binary email content is written to disk intact (C3).
         while !isComplete {
-            let rawData: Data = try await withCheckedThrowingContinuation { continuation in
-                connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
-                    if let error = error {
-                        continuation.resume(throwing: IMAPError.receiveFailed(error.localizedDescription))
-                    } else if let data = data, !data.isEmpty {
-                        continuation.resume(returning: data)
-                    } else {
-                        continuation.resume(throwing: IMAPError.receiveFailed("No data received"))
+            let rawData: Data = try await {
+                let watchdog = startConnectionWatchdog(seconds: Constants.imapReadTimeoutSeconds)
+                defer { watchdog.cancel() }
+                return try await withCheckedThrowingContinuation { continuation in
+                    connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
+                        if let error = error {
+                            continuation.resume(throwing: IMAPError.receiveFailed(error.localizedDescription))
+                        } else if let data = data, !data.isEmpty {
+                            continuation.resume(returning: data)
+                        } else {
+                            continuation.resume(throwing: IMAPError.receiveFailed("No data received"))
+                        }
                     }
                 }
-            }
+            }()
 
             // Write body bytes up to the declared literal size
             let bytesRemaining = literalSize - literalBytesReceived
@@ -855,10 +886,13 @@ actor IMAPService {
         return fullResponse
     }
 
-    func readResponse() async throws -> String {
+    func readResponse(timeout: TimeInterval = Constants.imapReadTimeoutSeconds) async throws -> String {
         guard let connection = connection else {
             throw IMAPError.notConnected
         }
+
+        let watchdog = startConnectionWatchdog(seconds: timeout)
+        defer { watchdog.cancel() }
 
         return try await withCheckedThrowingContinuation { continuation in
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
@@ -879,8 +913,14 @@ actor IMAPService {
                     trace("readResponse: got \(data.count) bytes")
                     continuation.resume(returning: response)
                 } else {
-                    trace("readResponse: no data")
-                    continuation.resume(returning: "")
+                    // No data and no error: this is how a watchdog-cancelled connection's
+                    // pending receive can resolve (NWConnection sometimes completes a
+                    // cancelled receive with data=nil, error=nil rather than an explicit
+                    // error). Treat it as a failure rather than silently returning "" —
+                    // an empty string here previously let callers' while-true response
+                    // loops spin forever on a dead connection instead of detecting it.
+                    trace("readResponse: no data (connection closed or cancelled)")
+                    continuation.resume(throwing: IMAPError.receiveFailed("No data received"))
                 }
             }
         }

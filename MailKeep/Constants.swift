@@ -45,4 +45,13 @@ enum Constants {
 
     /// UID validity value for mock testing
     static let mockUIDValidity: UInt32 = 12345
+
+    /// Default watchdog timeout for IMAP read operations (readResponse and raw
+    /// receive loops) — if a pending read never completes within this window,
+    /// the connection is force-cancelled so the awaiting continuation resumes
+    /// with an error instead of hanging the backup task forever.
+    static let imapReadTimeoutSeconds: TimeInterval = 120
+
+    /// Default watchdog timeout for the initial IMAP connect() handshake.
+    static let imapConnectTimeoutSeconds: TimeInterval = 30
 }
