@@ -97,3 +97,37 @@ If a backup appears stuck in "Counting emails…" or any phase:
   the next run; only recurring failures deserve investigation.
 - `logout()` after a successful backup is best-effort (`try?`) — a server
   closing the socket after BYE must not mark a green backup failed.
+
+## Backup location — NEVER put it in iCloud (incident 2026-08-01)
+
+**Current location: `~/MailKeep/<sanitized-account>/<folder>/…`** (UserDefaults
+key `BackupLocation`). It was `~/Documents/MailKeep` until 2026-08-01.
+
+If the UI shows **0 emails / Zero KB / 0 folders for every account** while
+`.eml` files clearly exist on disk, suspect cloud eviction FIRST:
+
+```bash
+find "$(defaults read com.kzahedi.MailKeep BackupLocation)" -name '*.eml' -flags +dataless | head
+```
+
+Any output means the files' contents are not on the Mac. `~/Documents` and
+`~/Desktop` are synced by iCloud Drive, and with "Optimize Mac Storage"
+(`defaults read com.apple.bird optimize-storage` → 1) macOS evicts file
+*contents* to iCloud, leaving `compressed,dataless` stubs. Every read then
+blocks 30–100 s on a network fetch, so:
+
+- `calculateStatsAtDirectory` never finishes → the UI keeps its initial zeros
+  (nothing is wrong with the stats code).
+- `.uid_cache` reads stall → the app re-downloads mail it already has, creating
+  `_1`, `_2`, … collision copies (10,017 such duplicates had accumulated).
+- Backups stall, fail, or wedge the app entirely.
+
+**Do not "fix" this in code.** The fix is to keep the archive out of any
+cloud-synced folder. `~/MailKeep` is correct: not synced, still covered by
+Time Machine. Recovery procedure if it ever recurs: materialize everything
+(parallel `cat`, ~160 concurrent — it is latency-bound, so concurrency is what
+buys throughput), then `mv` each account dir out of the synced folder (moving
+out of the File Provider domain materializes permanently), then repoint
+`BackupLocation`. Watch out when scripting it: some filenames contain spaces
+(use `xargs -0`) and at least one contains Zalgo text producing a 329-char path
+(avoid `xargs -I{}` templates).

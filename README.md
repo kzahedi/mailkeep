@@ -127,7 +127,7 @@ Use your regular IONOS email password with server `imap.ionos.de` on port 993 (S
 
 ### Storage Options
 
-- **Local Storage**: Backups saved to `~/Documents/MailKeep/`
+- **Local Storage**: Backups saved to `~/MailKeep/` (configurable). Keep this out of iCloud-synced folders such as `~/Documents` or `~/Desktop` — with "Optimize Mac Storage" macOS evicts file contents to iCloud, which stalls every read and makes statistics and incremental backups unusable.
 - **iCloud Drive**: Sync backups across all your Macs automatically
 - **Custom Location**: Choose any folder via Settings → General
 
