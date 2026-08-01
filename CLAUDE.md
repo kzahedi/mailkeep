@@ -76,3 +76,24 @@ When debugging "account shows red/orange dot" or "credentials sheet keeps appear
   `connectionFailed` (transient) in `loginWithOAuth2`.
 - Do not delete `backup_history.json` to "reset" a red dot — fix the underlying
   account; the dot clears on the next successful backup.
+
+## IMAP connection watchdogs (since 2026-07-31, merge 0526976)
+
+If a backup appears stuck in "Counting emails…" or any phase:
+
+- It cannot actually hang anymore. Every IMAP read has a 120 s watchdog and
+  connect has 30 s (`Constants.imapReadTimeoutSeconds` /
+  `imapConnectTimeoutSeconds`); on expiry the watchdog cancels the NWConnection,
+  the pending await throws `receiveFailed`, and the backup fails cleanly (red
+  dot + notification + scheduler freed). The IDLE long-poll gets IDLE-duration
+  + 30 s and is not affected.
+- Historical context: before this fix, a Gmail-side connection drop during a
+  pending read hung the backup task forever AND kept `isBackingUp == true`,
+  silently blocking ALL scheduled backups and probes until app restart
+  (2026-07-31 incident: 7 h hang; the Jul 27/28 08:00 runs failed with
+  "Socket is not connected" — same drop, caught on the write side).
+- A red dot with `receiveFailed`/"cancelled" in history therefore usually means
+  a flaky connection or server-side drop, not credentials. It should recover on
+  the next run; only recurring failures deserve investigation.
+- `logout()` after a successful backup is best-effort (`try?`) — a server
+  closing the socket after BYE must not mark a green backup failed.

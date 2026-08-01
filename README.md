@@ -26,6 +26,7 @@ Supports Gmail (OAuth2 and App Passwords), IONOS, and any custom IMAP server.
 - **Launch at login** - Start automatically when your Mac starts
 - **Menubar app** - Quick access to backup status and controls
 - **Backup-health menubar badge** - Per-account green/red status dot in the menubar, with a notification on new failures
+- **Connection watchdogs** - Every IMAP read/connect has a timeout; a dropped connection fails the backup cleanly instead of hanging it (and can never block other accounts' schedules)
 - **System notifications** - Get notified when backups complete or fail
 
 ### Storage & Management
